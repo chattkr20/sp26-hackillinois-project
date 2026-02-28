@@ -20,3 +20,7 @@
 chmod +x start.sh
 ./start.sh
 ```
+
+### AI Usage
+
+none
