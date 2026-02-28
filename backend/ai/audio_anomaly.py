@@ -350,50 +350,45 @@ def _run_zero_shot(waveform: torch.Tensor) -> dict[str, Any]:
     min_containers=1,
     timeout=120,
 )
-@modal.fastapi_endpoint(method="POST")
-def detect_anomaly(audio: bytes) -> dict[str, Any]:
+@modal.asgi_app()
+def detect_anomaly():
     """
-    POST endpoint — accepts raw WebM audio bytes (browser MediaRecorder).
-
-    Args:
-        audio: WebM audio bytes (body of the POST request).
-
-    Returns:
-        Structured JSON anomaly result.
-        On error: ``{"error": str}``
+    ASGI endpoint with CORS — accepts raw audio bytes from browser MediaRecorder.
+    URL: https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run
     """
-    global _model, _zero_shot
+    from fastapi import FastAPI, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
 
-    if _model is None and _zero_shot is None:
-        _load_model()
+    fastapi_app = FastAPI()
+    fastapi_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-    try:
-        waveform = _preprocess(audio)
-    except Exception as exc:
-        return {"error": f"audio preprocessing failed: {exc}"}
+    @fastapi_app.post("/")
+    async def _detect(request: Request):
+        global _model, _zero_shot
 
-    try:
-        if _use_zero_shot:
-            return _run_zero_shot(waveform)
-        return _run_fine_tuned(waveform)
-    except Exception as exc:
-        return {"error": f"inference failed: {exc}"}
+        if _model is None and _zero_shot is None:
+            _load_model()
 
+        audio = await request.body()
+        if not audio:
+            return JSONResponse({"error": "empty request body"}, status_code=400)
 
-# ---------------------------------------------------------------------------
-# Local test entrypoint
-# ---------------------------------------------------------------------------
+        try:
+            waveform = _preprocess(audio)
+        except Exception as exc:
+            return JSONResponse({"error": f"audio preprocessing failed: {exc}"}, status_code=422)
 
-if __name__ == "__main__":
-    import json
-    import sys
+        try:
+            if _use_zero_shot:
+                return _run_zero_shot(waveform)
+            return _run_fine_tuned(waveform)
+        except Exception as exc:
+            return JSONResponse({"error": f"inference failed: {exc}"}, status_code=500)
 
-    if len(sys.argv) < 2:
-        print("Usage: python audio_anomaly.py <path_to_webm_or_wav>")
-        sys.exit(1)
-
-    with open(sys.argv[1], "rb") as f:
-        raw = f.read()
-
-    result = detect_anomaly.local(raw)
-    print(json.dumps(result, indent=2))
+    return fastapi_app

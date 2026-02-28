@@ -152,78 +152,71 @@ def _convert_webm(webm_bytes: bytes) -> bytes:
     min_containers=1,
     timeout=120,
 )
-@modal.fastapi_endpoint(method="POST")
-def transcribe(audio: bytes) -> dict[str, Any]:
+@modal.asgi_app()
+def transcribe():
     """
-    POST endpoint — accepts raw WebM audio bytes (browser MediaRecorder output).
-
-    Args:
-        audio: WebM audio bytes (body of the POST request).
-
-    Returns:
-        Structured JSON with transcript, language, duration, and inspection notes.
-        On error: ``{"error": str}``
+    ASGI endpoint with CORS — accepts raw audio bytes from browser MediaRecorder.
+    URL: https://milindkumar1--cat-speech-to-text-transcribe.modal.run
     """
-    global _pipe
+    from fastapi import FastAPI, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
+    import io
+    import torchaudio
+    import torchaudio.functional as FA
 
-    if _pipe is None:
-        _load_model()
+    fastapi_app = FastAPI()
+    fastapi_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-    # ---- Convert WebM → WAV ---------------------------------------------
-    try:
-        wav_bytes = _convert_webm(audio)
-    except Exception as exc:
-        return {"error": f"audio conversion failed: {exc}"}
+    @fastapi_app.post("/")
+    async def _transcribe(request: Request):
+        global _pipe
 
-    # ---- Run Whisper ----------------------------------------------------
-    try:
-        import io
-        import torchaudio
+        if _pipe is None:
+            _load_model()
 
-        buf = io.BytesIO(wav_bytes)
-        waveform, sr = torchaudio.load(buf)  # (C, T)
-        duration = waveform.shape[-1] / sr
+        audio = await request.body()
+        if not audio:
+            return JSONResponse({"error": "empty request body"}, status_code=400)
 
-        # Whisper pipeline accepts a numpy array at 16 kHz
-        import torchaudio.functional as FA
-        if sr != 16_000:
-            waveform = FA.resample(waveform, sr, 16_000)
-        audio_np = waveform.squeeze(0).numpy()
+        # ---- Convert WebM → WAV -----------------------------------------
+        try:
+            wav_bytes = _convert_webm(audio)
+        except Exception as exc:
+            return JSONResponse({"error": f"audio conversion failed: {exc}"}, status_code=422)
 
-        result: dict = _pipe(
-            audio_np,
-            return_timestamps=False,
-            generate_kwargs={"language": "en", "task": "transcribe"},
-        )
-        transcript: str = result.get("text", "").strip()
-    except Exception as exc:
-        return {"error": f"transcription failed: {exc}"}
+        # ---- Run Whisper ------------------------------------------------
+        try:
+            buf = io.BytesIO(wav_bytes)
+            waveform, sr = torchaudio.load(buf)  # (C, T)
+            duration = waveform.shape[-1] / sr
 
-    # ---- Post-process ---------------------------------------------------
-    inspection_notes = _extract_inspection_notes(transcript)
+            if sr != 16_000:
+                waveform = FA.resample(waveform, sr, 16_000)
+            audio_np = waveform.squeeze(0).numpy()
 
-    return {
-        "transcript": transcript,
-        "language": "en",
-        "duration_seconds": round(duration, 2),
-        "inspection_notes": inspection_notes,
-    }
+            result: dict = _pipe(
+                audio_np,
+                return_timestamps=False,
+                generate_kwargs={"language": "en", "task": "transcribe"},
+            )
+            transcript: str = result.get("text", "").strip()
+        except Exception as exc:
+            return JSONResponse({"error": f"transcription failed: {exc}"}, status_code=500)
 
+        # ---- Post-process -----------------------------------------------
+        inspection_notes = _extract_inspection_notes(transcript)
 
-# ---------------------------------------------------------------------------
-# Local test entrypoint
-# ---------------------------------------------------------------------------
+        return {
+            "transcript": transcript,
+            "language": "en",
+            "duration_seconds": round(duration, 2),
+            "inspection_notes": inspection_notes,
+        }
 
-if __name__ == "__main__":
-    import json
-    import sys
-
-    if len(sys.argv) < 2:
-        print("Usage: python speech_to_text.py <path_to_webm_or_wav>")
-        sys.exit(1)
-
-    with open(sys.argv[1], "rb") as f:
-        raw = f.read()
-
-    result = transcribe.local(raw)
-    print(json.dumps(result, indent=2))
+    return fastapi_app
