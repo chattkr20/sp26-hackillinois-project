@@ -4,7 +4,9 @@
 
 **Project Track:** Caterpillar
 
-**Awards:**
+**HackIllinois Awards:**
+
+**Company Awards:**
 
 ## Project Details
 
