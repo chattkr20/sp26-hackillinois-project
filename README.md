@@ -14,6 +14,9 @@
 
 ```./start.ps1```
 
-#### Mac
+#### Mac / Linux
 
-```./start.sh```
+```
+chmod +x start.sh
+./start.sh
+```
