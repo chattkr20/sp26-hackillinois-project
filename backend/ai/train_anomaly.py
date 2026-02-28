@@ -291,12 +291,39 @@ def train() -> dict[str, Any]:
     bce_loss = nn.BCEWithLogitsLoss()
     ce_loss = nn.CrossEntropyLoss()
 
-    # ---- Training loop -----------------------------------------------------
+    # ---- Resume from checkpoint if available -------------------------------
     best_val_auc: float = 0.0
     best_threshold: float = CONFIG["threshold"]
     history: list[dict[str, float]] = []
+    start_epoch: int = 1
 
-    for epoch in range(1, TRAIN_CONFIG["epochs"] + 1):
+    ckpt_path = TRAIN_CONFIG["checkpoint_path"]
+    if os.path.exists(ckpt_path):
+        print(f"Resuming from checkpoint: {ckpt_path}")
+        ckpt = torch.load(ckpt_path, map_location=device)
+        model.load_state_dict(ckpt["model_state_dict"])
+        if "optimizer_state_dict" in ckpt:
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        if "scheduler_state_dict" in ckpt:
+            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+        best_val_auc = ckpt.get("best_val_auc", 0.0)
+        best_threshold = ckpt.get("config", {}).get("threshold", CONFIG["threshold"])
+        start_epoch = ckpt.get("completed_epochs", 0) + 1
+        history = ckpt.get("history", [])
+        print(f"  ↳ Resumed: best_val_auc={best_val_auc:.4f}, starting at epoch {start_epoch}")
+    else:
+        print("No checkpoint found — starting fresh.")
+
+    if start_epoch > TRAIN_CONFIG["epochs"]:
+        print("Training already complete (all epochs done). Returning saved results.")
+        return {
+            "best_val_auc": best_val_auc,
+            "final_threshold": best_threshold,
+            "history": history,
+        }
+
+    # ---- Training loop -----------------------------------------------------
+    for epoch in range(start_epoch, TRAIN_CONFIG["epochs"] + 1):
         model.train()
         train_loss_accum = 0.0
         optimizer.zero_grad()
@@ -368,16 +395,22 @@ def train() -> dict[str, Any]:
             best_val_auc = val_auc
             best_threshold = best_t
 
-            checkpoint = {
-                "model_state_dict": model.state_dict(),
-                "config": {
-                    **CONFIG,
-                    "threshold": best_threshold,
-                },
-            }
-            torch.save(checkpoint, TRAIN_CONFIG["checkpoint_path"])
-            volume.commit()
-            print(f"  ↳ Checkpoint saved (val_auc={best_val_auc:.4f})")
+        # Always save after each epoch to enable resume
+        checkpoint = {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "completed_epochs": epoch,
+            "best_val_auc": best_val_auc,
+            "history": history,
+            "config": {
+                **CONFIG,
+                "threshold": best_threshold,
+            },
+        }
+        torch.save(checkpoint, TRAIN_CONFIG["checkpoint_path"])
+        volume.commit()
+        print(f"  ↳ Checkpoint saved (epoch={epoch}, val_auc={val_auc:.4f}, best_ever={best_val_auc:.4f})")
 
     print(f"\nTraining complete. Best val AUC: {best_val_auc:.4f}, threshold: {best_threshold:.2f}")
     return {
