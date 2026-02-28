@@ -94,6 +94,11 @@ export default function AudioRecording() {
         setSubmitError(null);
         setResults(null);
 
+        // Auto-stop mic immediately when submit is triggered
+        SpeechRecognition.stopListening();
+        setRecordingStarted(false);
+        resetTranscript();
+
         try {
             const [machineTestAudio, descriptionAudio] = await Promise.all([
                 fetch(machineTestFileRef.current).then(r => r.blob()),
@@ -117,8 +122,6 @@ export default function AudioRecording() {
         } finally {
             setIsSubmitting(false);
         }
-
-        micPressed();
     }
 
     const {
@@ -126,17 +129,45 @@ export default function AudioRecording() {
         listening,
         resetTranscript,
         browserSupportsSpeechRecognition
-    } = useSpeechRecognition({
-        commands: [
-            { command: ['start part name', 'start part names'], callback: beginPartName },
-            { command: ['stop part name', 'stop part names'], callback: endPartName },
-            { command: ['start machine test', 'start machine tests'], callback: beginMachineTest },
-            { command: ['stop machine test', 'stop machine tests'], callback: endMachineTest },
-            { command: ['start description', 'start descriptions'], callback: beginDescription },
-            { command: ['stop description', 'stop descriptions'], callback: endDescription },
-            { command: ['confirm', 'submit', 'done'], callback: submitData },
-        ]
+    } = useSpeechRecognition();
+
+    // Use refs so the polling useEffect always sees current callbacks without stale closures
+    const actionsRef = useRef({
+        beginMachineTest, endMachineTest,
+        beginDescription, endDescription,
+        beginPartName, endPartName,
+        submitData,
     });
+    useEffect(() => {
+        actionsRef.current = { beginMachineTest, endMachineTest, beginDescription, endDescription, beginPartName, endPartName, submitData };
+    });
+
+    // Transcript polling — scans the live transcript for command keywords mid-stream.
+    // Works even when commands are embedded in continuous speech.
+    useEffect(() => {
+        if (!transcript) return;
+        const t = transcript.toLowerCase();
+
+        if (t.includes('start machine test')) {
+            actionsRef.current.beginMachineTest();
+        } else if (t.includes('stop machine test')) {
+            actionsRef.current.endMachineTest();
+        } else if (t.includes('start description')) {
+            actionsRef.current.beginDescription();
+        } else if (t.includes('stop description')) {
+            actionsRef.current.endDescription();
+        } else if (t.includes('start part name')) {
+            actionsRef.current.beginPartName();
+        } else if (t.includes('stop part name')) {
+            // Extract only the text before the stop keyword as the part name
+            const captured = transcript.substring(0, t.indexOf('stop part name')).trim();
+            setPartName(captured || null);
+            setActive(null);
+            resetTranscript();
+        } else if (t.includes('confirm') || t.includes('done') || t.includes('submit')) {
+            actionsRef.current.submitData();
+        }
+    }, [transcript]);
 
     const [recordingStarted, setRecordingStarted] = useState(false);
     const [showDevPanel, setShowDevPanel] = useState(false);
