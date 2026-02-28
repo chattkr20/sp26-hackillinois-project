@@ -2,7 +2,7 @@
 
 ## HackIllinois Info
 
-**Project Track:**
+**Project Track:** Caterpillar
 
 **Awards:**
 
