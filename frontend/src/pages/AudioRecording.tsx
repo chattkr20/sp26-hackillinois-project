@@ -7,10 +7,19 @@ import { useReactMediaRecorder } from 'react-media-recorder';
 const ANOMALY_API = 'https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run';
 const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
 
+type ActiveRecording = 'machineTest' | 'description' | 'partName' | null;
+
 export default function AudioRecording() {
 
-    const activeRecordingRef = useRef<'machineTest' | 'description' | 'partName' | null>(null);
+    const activeRecordingRef = useRef<ActiveRecording>(null);
+    const [activeRecordingDisplay, setActiveRecordingDisplay] = useState<ActiveRecording>(null);
     const [partName, setPartName] = useState<string | null>(null);
+    const [machineTestDone, setMachineTestDone] = useState(false);
+    const [descriptionDone, setDescriptionDone] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [results, setResults] = useState<{ anomaly: any; stt: any } | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+
     const machineTestFileRef = useRef<string | null>(null);
     const descriptionFileRef = useRef<string | null>(null);
 
@@ -20,80 +29,70 @@ export default function AudioRecording() {
     useEffect(() => {
         if (machineTestBlob) {
             machineTestFileRef.current = machineTestBlob;
-            console.log("Machine test saved:", machineTestBlob);
+            setMachineTestDone(true);
         }
     }, [machineTestBlob]);
 
     useEffect(() => {
         if (descriptionBlob) {
             descriptionFileRef.current = descriptionBlob;
-            console.log("Description saved:", descriptionBlob);
+            setDescriptionDone(true);
         }
     }, [descriptionBlob]);
 
+    const setActive = (val: ActiveRecording) => {
+        activeRecordingRef.current = val;
+        setActiveRecordingDisplay(val);
+    };
+
     const beginPartName = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start part name while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
-        activeRecordingRef.current = 'partName';
-        console.log("BEGIN PART NAME");
+        if (activeRecordingRef.current !== null) return;
+        setActive('partName');
         resetTranscript();
     }
 
     const endPartName = () => {
         setPartName(transcript);
-        activeRecordingRef.current = null;
-        console.log("END PART NAME, saved:", transcript);
+        setActive(null);
         resetTranscript();
     }
 
     const beginMachineTest = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start machine test while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
+        if (activeRecordingRef.current !== null) return;
         startMachineTest();
-        activeRecordingRef.current = 'machineTest';
-        console.log("BEGIN MACHINE TEST");
+        setMachineTestDone(false);
+        setActive('machineTest');
         resetTranscript();
     }
 
     const endMachineTest = () => {
         stopMachineTest();
-        activeRecordingRef.current = null;
-        console.log("END MACHINE TEST");
+        setActive(null);
         resetTranscript();
     }
 
     const beginDescription = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start description while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
+        if (activeRecordingRef.current !== null) return;
         startDescription();
-        activeRecordingRef.current = 'description';
-        console.log("BEGIN DESCRIPTION");
+        setDescriptionDone(false);
+        setActive('description');
         resetTranscript();
     }
 
     const endDescription = () => {
         stopDescription();
-        activeRecordingRef.current = null;
-        console.log("END DESCRIPTION");
+        setActive(null);
         resetTranscript();
     }
 
     const submitData = async () => {
-        console.log("SUBMIT");
-
         if (!machineTestFileRef.current || !descriptionFileRef.current) {
-            console.log("ERROR: Missing recordings — machineTest:", machineTestFileRef.current, "description:", descriptionFileRef.current);
+            setSubmitError('Missing recordings — record both machine test and description first.');
             return;
         }
+        setIsSubmitting(true);
+        setSubmitError(null);
+        setResults(null);
 
         try {
             const [machineTestAudio, descriptionAudio] = await Promise.all([
@@ -101,20 +100,17 @@ export default function AudioRecording() {
                 fetch(descriptionFileRef.current).then(r => r.blob()),
             ]);
 
-            console.log("Submitting machine test audio, size:", machineTestAudio.size, "type:", machineTestAudio.type);
-            console.log("Submitting description audio, size:", descriptionAudio.size, "type:", descriptionAudio.type);
-
             const [anomalyRes, sttRes] = await Promise.all([
                 fetch(ANOMALY_API, { method: 'POST', body: machineTestAudio, headers: { 'Content-Type': 'application/octet-stream' } }),
                 fetch(STT_API, { method: 'POST', body: descriptionAudio, headers: { 'Content-Type': 'application/octet-stream' } }),
             ]);
 
             const [anomalyResult, sttResult] = await Promise.all([anomalyRes.json(), sttRes.json()]);
-
-            console.log("Anomaly result:", anomalyResult);
-            console.log("STT result:", sttResult);
-        } catch (err) {
-            console.log("ERROR during submit:", err);
+            setResults({ anomaly: anomalyResult, stt: sttResult });
+        } catch (err: any) {
+            setSubmitError(`Submit failed: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
         }
 
         micPressed();
@@ -146,28 +142,108 @@ export default function AudioRecording() {
     }, [listening, recordingStarted]);
 
     if (!browserSupportsSpeechRecognition) {
-        console.log("BROWSER UNSUPPORTED");
         return <span>Browser doesn't support speech recognition.</span>;
     }
 
     const micPressed = () => {
-        console.log("MIC PRESSED");
         if (!recordingStarted) {
-            SpeechRecognition.startListening({ language: "en-US", continuous: true });
-            setRecordingStarted(!recordingStarted);
-            console.log("RECORDING STARTED");
+            SpeechRecognition.startListening({ language: 'en-US', continuous: true });
+            setRecordingStarted(true);
         } else {
-            SpeechRecognition.stopListening({ language: "en-US" });
-            setRecordingStarted(!recordingStarted);
-            console.log(transcript);
+            SpeechRecognition.stopListening();
+            setRecordingStarted(false);
             resetTranscript();
-            console.log("RECORDING ENDED");
         }
     };
 
+    const activeLabels: Record<string, string> = {
+        machineTest: '🔴 Recording: Machine Test',
+        description: '🔴 Recording: Description',
+        partName: '🔴 Listening: Part Name',
+    };
+
+    const anomalyStatus = results?.anomaly?.status;
+
     return (
         <div id='recording-screen'>
-            <Microphone micPressed={micPressed} />
+            <div id='status-panel'>
+                <h2>CAT Inspection Tool</h2>
+
+                <div id='mic-row'>
+                    <Microphone micPressed={micPressed} />
+                    <span className={`listen-label ${recordingStarted ? 'active' : ''}`}>
+                        {recordingStarted ? '🎙️ Listening for commands...' : 'Tap mic to start'}
+                    </span>
+                </div>
+
+                {recordingStarted && (
+                    <div id='transcript-box'>
+                        <span className='label'>Heard:</span>
+                        {transcript || <em>say a command...</em>}
+                    </div>
+                )}
+
+                {activeRecordingDisplay && (
+                    <div className='badge badge-recording'>
+                        {activeLabels[activeRecordingDisplay]}
+                    </div>
+                )}
+
+                <div id='recordings-status'>
+                    <div className={`recording-item ${machineTestDone ? 'done' : ''}`}>
+                        {machineTestDone ? '✅' : '⬜'} Machine Test Audio
+                    </div>
+                    <div className={`recording-item ${descriptionDone ? 'done' : ''}`}>
+                        {descriptionDone ? '✅' : '⬜'} Description Audio
+                    </div>
+                    {partName && (
+                        <div className='recording-item done'>✅ Part Name: <strong>{partName}</strong></div>
+                    )}
+                </div>
+
+                <div id='commands-hint'>
+                    <strong>Voice commands:</strong>
+                    <ul>
+                        <li>"begin / end machine test"</li>
+                        <li>"begin / end description"</li>
+                        <li>"begin / end part name"</li>
+                        <li>"submit"</li>
+                    </ul>
+                </div>
+
+                {submitError && <div className='badge badge-error'>{submitError}</div>}
+                {isSubmitting && <div className='badge badge-submitting'>⏳ Submitting to AI...</div>}
+
+                {results && (
+                    <div id='results-panel'>
+                        <div className={`result-status ${anomalyStatus}`}>
+                            {anomalyStatus === 'anomaly' ? '⚠️ ANOMALY DETECTED' : '✅ NORMAL'}
+                        </div>
+                        <div className='result-row'>
+                            <span>Anomaly Score</span>
+                            <strong>{(results.anomaly.anomaly_score * 100).toFixed(1)}%</strong>
+                        </div>
+                        {results.anomaly.machine_type && (
+                            <div className='result-row'>
+                                <span>Machine Type</span>
+                                <strong>{results.anomaly.machine_type}</strong>
+                            </div>
+                        )}
+                        {results.anomaly.anomaly_subtype && (
+                            <div className='result-row'>
+                                <span>Fault Type</span>
+                                <strong>{results.anomaly.anomaly_subtype}</strong>
+                            </div>
+                        )}
+                        {results.stt?.transcript && (
+                            <div className='result-row'>
+                                <span>Transcript</span>
+                                <em>{results.stt.transcript}</em>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
