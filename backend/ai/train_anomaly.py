@@ -198,7 +198,7 @@ def _build_dataset(split: str):
     image=train_image,
     gpu="A10G",
     volumes={"/vol": volume},
-    timeout=7200,   # 2 hours
+    timeout=21600,  # 6 hours
 )
 def train() -> dict[str, Any]:
     """
