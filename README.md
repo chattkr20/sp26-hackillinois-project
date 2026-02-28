@@ -10,11 +10,15 @@
 
 ### Running Backend Locally
 
-`cd backend`
+```
+cd backend
+```
 
 #### Windows
 
-```./start.ps1```
+```
+./start.ps1
+```
 
 #### Mac / Linux
 
