@@ -3,24 +3,63 @@ import './AudioRecording.css'
 import { useState, useEffect } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
-export default function AudioRecording () {
+export default function AudioRecording() {
 
-    const commands = [
-        {
-            command: 'testing commands',
-            callback: () => {
-                console.log("TEST SUCCESSFUL");
-            }
-        },
-    ];
+    const beginMachineTest = () => {
+        console.log("BEGIN MACHINE TEST");
+        resetTranscript();
+    }
+
+    const endMachineTest = () => {
+        console.log("END MACHINE TEST");
+        resetTranscript();
+    }
+
+    const beginDescription = () => {
+        console.log("BEGIN DESCRIPTION");
+        resetTranscript();
+    }
+
+    const endDescription = () => {
+        console.log("END DESCRIPTION");
+        resetTranscript();
+    }
+
+    const submitData = () => {
+        console.log("SUBMIT");
+        micPressed();
+    }
 
     const {
         transcript,
         listening,
         resetTranscript,
         browserSupportsSpeechRecognition
-    } = useSpeechRecognition({ commands });
-    
+    } = useSpeechRecognition({
+        commands: [
+            {
+                command: 'begin machine test',
+                callback: beginMachineTest
+            },
+            {
+                command: 'end machine test',
+                callback: endMachineTest
+            },
+            {
+                command: 'begin description',
+                callback: beginDescription
+            },
+            {
+                command: 'end description',
+                callback: endDescription
+            },
+            {
+                command: 'submit',
+                callback: submitData
+            },
+        ]
+    });
+
     const [recordingStarted, setRecordingStarted] = useState(false);
 
     useEffect(() => {
@@ -36,7 +75,7 @@ export default function AudioRecording () {
 
     const micPressed = () => {
         console.log("MIC PRESSED");
-        if ( !recordingStarted ) {
+        if (!recordingStarted) {
             SpeechRecognition.startListening({ language: "en-US", continuous: true });
             setRecordingStarted(!recordingStarted);
             console.log("RECORDING STARTED");
