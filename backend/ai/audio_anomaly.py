@@ -377,18 +377,21 @@ def detect_anomaly():
 
         audio = await request.body()
         if not audio:
-            return JSONResponse({"error": "empty request body"}, status_code=400)
+            return JSONResponse({"error": "empty request body", "size": 0})
 
+        print(f"[detect_anomaly] received {len(audio)} bytes")
         try:
             waveform = _preprocess(audio)
         except Exception as exc:
-            return JSONResponse({"error": f"audio preprocessing failed: {exc}"}, status_code=422)
+            print(f"[detect_anomaly] preprocessing error: {exc}")
+            return JSONResponse({"error": f"audio preprocessing failed: {exc}"})
 
         try:
             if _use_zero_shot:
                 return _run_zero_shot(waveform)
             return _run_fine_tuned(waveform)
         except Exception as exc:
-            return JSONResponse({"error": f"inference failed: {exc}"}, status_code=500)
+            print(f"[detect_anomaly] inference error: {exc}")
+            return JSONResponse({"error": f"inference failed: {exc}"})
 
     return fastapi_app

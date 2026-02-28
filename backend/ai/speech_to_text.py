@@ -182,13 +182,15 @@ def transcribe():
 
         audio = await request.body()
         if not audio:
-            return JSONResponse({"error": "empty request body"}, status_code=400)
+            return JSONResponse({"error": "empty request body", "size": 0})
 
+        print(f"[transcribe] received {len(audio)} bytes")
         # ---- Convert WebM → WAV -----------------------------------------
         try:
             wav_bytes = _convert_webm(audio)
         except Exception as exc:
-            return JSONResponse({"error": f"audio conversion failed: {exc}"}, status_code=422)
+            print(f"[transcribe] conversion error: {exc}")
+            return JSONResponse({"error": f"audio conversion failed: {exc}"})
 
         # ---- Run Whisper ------------------------------------------------
         try:
@@ -207,7 +209,8 @@ def transcribe():
             )
             transcript: str = result.get("text", "").strip()
         except Exception as exc:
-            return JSONResponse({"error": f"transcription failed: {exc}"}, status_code=500)
+            print(f"[transcribe] whisper error: {exc}")
+            return JSONResponse({"error": f"transcription failed: {exc}"})
 
         # ---- Post-process -----------------------------------------------
         inspection_notes = _extract_inspection_notes(transcript)

@@ -23,8 +23,8 @@ export default function AudioRecording() {
     const machineTestFileRef = useRef<string | null>(null);
     const descriptionFileRef = useRef<string | null>(null);
 
-    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob } = useReactMediaRecorder({ audio: true, mimeType: 'audio/wav' });
-    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob } = useReactMediaRecorder({ audio: true, mimeType: 'audio/wav' });
+    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob } = useReactMediaRecorder({ audio: true });
+    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob } = useReactMediaRecorder({ audio: true });
 
     useEffect(() => {
         if (machineTestBlob) {
@@ -106,7 +106,12 @@ export default function AudioRecording() {
             ]);
 
             const [anomalyResult, sttResult] = await Promise.all([anomalyRes.json(), sttRes.json()]);
-            setResults({ anomaly: anomalyResult, stt: sttResult });
+
+            if (anomalyResult.error || sttResult.error) {
+                setSubmitError(`API error — anomaly: ${anomalyResult.error || 'ok'} | stt: ${sttResult.error || 'ok'}`);
+            } else {
+                setResults({ anomaly: anomalyResult, stt: sttResult });
+            }
         } catch (err: any) {
             setSubmitError(`Submit failed: ${err.message}`);
         } finally {
@@ -123,13 +128,13 @@ export default function AudioRecording() {
         browserSupportsSpeechRecognition
     } = useSpeechRecognition({
         commands: [
-            { command: 'begin part name', callback: beginPartName },
-            { command: 'end part name', callback: endPartName },
-            { command: 'begin machine test', callback: beginMachineTest },
-            { command: 'end machine test', callback: endMachineTest },
-            { command: 'begin description', callback: beginDescription },
-            { command: 'end description', callback: endDescription },
-            { command: 'submit', callback: submitData },
+            { command: ['start part name', 'start part names'], callback: beginPartName },
+            { command: ['stop part name', 'stop part names'], callback: endPartName },
+            { command: ['start machine test', 'start machine tests'], callback: beginMachineTest },
+            { command: ['stop machine test', 'stop machine tests'], callback: endMachineTest },
+            { command: ['start description', 'start descriptions'], callback: beginDescription },
+            { command: ['stop description', 'stop descriptions'], callback: endDescription },
+            { command: ['confirm', 'submit', 'done'], callback: submitData },
         ]
     });
 
@@ -204,10 +209,10 @@ export default function AudioRecording() {
                 <div id='commands-hint'>
                     <strong>Voice commands:</strong>
                     <ul>
-                        <li>"begin / end machine test"</li>
-                        <li>"begin / end description"</li>
-                        <li>"begin / end part name"</li>
-                        <li>"submit"</li>
+                        <li>\"start machine test\" → \"stop machine test\"</li>
+                        <li>\"start description\" → \"stop description\"</li>
+                        <li>\"start part name\" → \"stop part name\"</li>
+                        <li>\"confirm\" or \"done\"</li>
                     </ul>
                 </div>
 
