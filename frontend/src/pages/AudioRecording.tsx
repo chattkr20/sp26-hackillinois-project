@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { useReactMediaRecorder } from 'react-media-recorder';
 
+const ANOMALY_API = 'https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run';
+const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
+
 export default function AudioRecording() {
 
     const activeRecordingRef = useRef<'machineTest' | 'description' | 'partName' | null>(null);
@@ -84,8 +87,36 @@ export default function AudioRecording() {
         resetTranscript();
     }
 
-    const submitData = () => {
+    const submitData = async () => {
         console.log("SUBMIT");
+
+        if (!machineTestFileRef.current || !descriptionFileRef.current) {
+            console.log("ERROR: Missing recordings — machineTest:", machineTestFileRef.current, "description:", descriptionFileRef.current);
+            return;
+        }
+
+        try {
+            const [machineTestAudio, descriptionAudio] = await Promise.all([
+                fetch(machineTestFileRef.current).then(r => r.blob()),
+                fetch(descriptionFileRef.current).then(r => r.blob()),
+            ]);
+
+            console.log("Submitting machine test audio, size:", machineTestAudio.size, "type:", machineTestAudio.type);
+            console.log("Submitting description audio, size:", descriptionAudio.size, "type:", descriptionAudio.type);
+
+            const [anomalyRes, sttRes] = await Promise.all([
+                fetch(ANOMALY_API, { method: 'POST', body: machineTestAudio, headers: { 'Content-Type': 'application/octet-stream' } }),
+                fetch(STT_API, { method: 'POST', body: descriptionAudio, headers: { 'Content-Type': 'application/octet-stream' } }),
+            ]);
+
+            const [anomalyResult, sttResult] = await Promise.all([anomalyRes.json(), sttRes.json()]);
+
+            console.log("Anomaly result:", anomalyResult);
+            console.log("STT result:", sttResult);
+        } catch (err) {
+            console.log("ERROR during submit:", err);
+        }
+
         micPressed();
     }
 
