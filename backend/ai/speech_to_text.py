@@ -136,8 +136,9 @@ def _extract_inspection_notes(transcript: str) -> list[dict[str, Any]]:
 
 def _convert_webm(webm_bytes: bytes) -> bytes:
     """Inline import to avoid circular issues when this module used standalone."""
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    import sys
+    if '/root' not in sys.path:
+        sys.path.insert(0, '/root')
     from ai_utils import webm_to_wav_bytes
     return webm_to_wav_bytes(webm_bytes)
 

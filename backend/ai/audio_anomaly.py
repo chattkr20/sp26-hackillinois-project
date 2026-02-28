@@ -266,6 +266,9 @@ def _preprocess(webm_bytes: bytes) -> torch.Tensor:
     Returns:
         Tensor of shape (1, clip_samples) on CUDA.
     """
+    import sys
+    if '/root' not in sys.path:
+        sys.path.insert(0, '/root')
     from ai_utils import webm_to_wav_bytes, load_waveform, pad_or_crop, normalise_waveform
 
     wav_bytes = webm_to_wav_bytes(webm_bytes)
@@ -379,6 +382,9 @@ def detect_anomaly():
             return JSONResponse({"error": "empty request body", "size": 0})
 
         print(f"[detect_anomaly] received {len(audio)} bytes")
+        import sys
+        if '/root' not in sys.path:
+            sys.path.insert(0, '/root')
         try:
             waveform = _preprocess(audio)
         except Exception as exc:

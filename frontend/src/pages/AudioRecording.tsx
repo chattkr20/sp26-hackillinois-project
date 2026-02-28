@@ -139,6 +139,7 @@ export default function AudioRecording() {
     });
 
     const [recordingStarted, setRecordingStarted] = useState(false);
+    const [showDevPanel, setShowDevPanel] = useState(false);
 
     useEffect(() => {
         if (!listening && recordingStarted) {
@@ -241,9 +242,24 @@ export default function AudioRecording() {
                             </div>
                         )}
                         {results.stt?.transcript && (
-                            <div className='result-row'>
+                            <div className='result-row transcript-row'>
                                 <span>Transcript</span>
                                 <em>{results.stt.transcript}</em>
+                            </div>
+                        )}
+                        <button className='dev-toggle' onClick={() => setShowDevPanel(v => !v)}>
+                            {showDevPanel ? '▲ Hide raw output' : '▼ Show raw output'}
+                        </button>
+                        {showDevPanel && (
+                            <div id='dev-panel'>
+                                <div className='dev-section'>
+                                    <strong>Anomaly API response:</strong>
+                                    <pre>{JSON.stringify(results.anomaly, null, 2)}</pre>
+                                </div>
+                                <div className='dev-section'>
+                                    <strong>Transcription API response:</strong>
+                                    <pre>{JSON.stringify(results.stt, null, 2)}</pre>
+                                </div>
                             </div>
                         )}
                     </div>
