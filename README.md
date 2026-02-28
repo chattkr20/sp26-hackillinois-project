@@ -8,7 +8,9 @@
 
 ## Project Details
 
-### Running Locally
+### Running Backend Locally
+
+`cd backend`
 
 #### Windows
 
@@ -19,6 +21,13 @@
 ```
 chmod +x start.sh
 ./start.sh
+```
+
+### Running Frontend Locally
+
+```
+cd frontend
+npm run dev
 ```
 
 ### AI Usage
