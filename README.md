@@ -7,3 +7,13 @@
 **Awards:**
 
 ## Project Details
+
+### Running Locally
+
+#### Windows
+
+```./start.ps1```
+
+#### Mac
+
+```./start.sh```
