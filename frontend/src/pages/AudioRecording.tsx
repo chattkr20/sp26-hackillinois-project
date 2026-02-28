@@ -1,6 +1,6 @@
 import Microphone from '../components/Mic';
 import './AudioRecording.css'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 export default function AudioRecording () {
@@ -23,6 +23,12 @@ export default function AudioRecording () {
     
     const [recordingStarted, setRecordingStarted] = useState(false);
 
+    useEffect(() => {
+        if (!listening && recordingStarted) {
+            SpeechRecognition.startListening({ continuous: true });
+        }
+    }, [listening, recordingStarted]);
+
     if (!browserSupportsSpeechRecognition) {
         console.log("BROWSER UNSUPPORTED");
         return <span>Browser doesn't support speech recognition.</span>;
@@ -30,14 +36,15 @@ export default function AudioRecording () {
 
     const micPressed = () => {
         console.log("MIC PRESSED");
-        if ( recordingStarted ) {
-            SpeechRecognition.startListening({ language: "en-US" });
+        if ( !recordingStarted ) {
+            SpeechRecognition.startListening({ language: "en-US", continuous: true });
             setRecordingStarted(!recordingStarted);
             console.log("RECORDING STARTED");
         } else {
             SpeechRecognition.stopListening({ language: "en-US" });
-            resetTranscript();
             setRecordingStarted(!recordingStarted);
+            console.log(transcript);
+            resetTranscript();
             console.log("RECORDING ENDED");
         }
     };
@@ -45,8 +52,6 @@ export default function AudioRecording () {
     return (
         <div id='recording-screen'>
             <Microphone micPressed={micPressed} />
-            <p>{ listening }</p>
-            <p>{ transcript }</p>
         </div>
     );
 }
