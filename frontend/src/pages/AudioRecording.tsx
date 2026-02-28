@@ -7,102 +7,103 @@ import { useReactMediaRecorder } from 'react-media-recorder';
 const ANOMALY_API = 'https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run';
 const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
 
+type ActiveRecording = 'machineTest' | 'description' | 'partName' | null;
+
 export default function AudioRecording() {
 
-    const activeRecordingRef = useRef<'machineTest' | 'description' | 'partName' | null>(null);
+    const activeRecordingRef = useRef<ActiveRecording>(null);
+    const [activeRecordingDisplay, setActiveRecordingDisplay] = useState<ActiveRecording>(null);
     const [partName, setPartName] = useState<string | null>(null);
+    const [machineTestDone, setMachineTestDone] = useState(false);
+    const [descriptionDone, setDescriptionDone] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [results, setResults] = useState<{ anomaly: any; stt: any } | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+
     const machineTestFileRef = useRef<string | null>(null);
     const descriptionFileRef = useRef<string | null>(null);
 
-    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob } = useReactMediaRecorder({ audio: true, mimeType: 'audio/wav' });
-    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob } = useReactMediaRecorder({ audio: true, mimeType: 'audio/wav' });
+    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob } = useReactMediaRecorder({ audio: true });
+    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob } = useReactMediaRecorder({ audio: true });
 
     useEffect(() => {
         if (machineTestBlob) {
             machineTestFileRef.current = machineTestBlob;
-            console.log("Machine test saved:", machineTestBlob);
+            setMachineTestDone(true);
         }
     }, [machineTestBlob]);
 
     useEffect(() => {
         if (descriptionBlob) {
             descriptionFileRef.current = descriptionBlob;
-            console.log("Description saved:", descriptionBlob);
+            setDescriptionDone(true);
         }
     }, [descriptionBlob]);
 
+    const setActive = (val: ActiveRecording) => {
+        activeRecordingRef.current = val;
+        setActiveRecordingDisplay(val);
+    };
+
     const beginPartName = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start part name while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
-        activeRecordingRef.current = 'partName';
-        console.log("BEGIN PART NAME");
+        if (activeRecordingRef.current !== null) return;
+        setActive('partName');
         resetTranscript();
     }
 
     const endPartName = () => {
         setPartName(transcript);
-        activeRecordingRef.current = null;
-        console.log("END PART NAME, saved:", transcript);
+        setActive(null);
         resetTranscript();
     }
 
     const beginMachineTest = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start machine test while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
+        if (activeRecordingRef.current !== null) return;
         startMachineTest();
-        activeRecordingRef.current = 'machineTest';
-        console.log("BEGIN MACHINE TEST");
+        setMachineTestDone(false);
+        setActive('machineTest');
         resetTranscript();
     }
 
     const endMachineTest = () => {
         stopMachineTest();
-        activeRecordingRef.current = null;
-        console.log("END MACHINE TEST");
+        setActive(null);
         resetTranscript();
     }
 
     const beginDescription = () => {
-        if (activeRecordingRef.current !== null) {
-            console.log("ERROR: Cannot start description while another recording is active:", activeRecordingRef.current);
-            resetTranscript();
-            return;
-        }
+        if (activeRecordingRef.current !== null) return;
         startDescription();
-        activeRecordingRef.current = 'description';
-        console.log("BEGIN DESCRIPTION");
+        setDescriptionDone(false);
+        setActive('description');
         resetTranscript();
     }
 
     const endDescription = () => {
         stopDescription();
-        activeRecordingRef.current = null;
-        console.log("END DESCRIPTION");
+        setActive(null);
         resetTranscript();
     }
 
     const submitData = async () => {
-        console.log("SUBMIT");
-
         if (!machineTestFileRef.current || !descriptionFileRef.current) {
-            console.log("ERROR: Missing recordings — machineTest:", machineTestFileRef.current, "description:", descriptionFileRef.current);
+            setSubmitError('Missing recordings — record both machine test and description first.');
             return;
         }
+        setIsSubmitting(true);
+        setSubmitError(null);
+        setResults(null);
+
+        // Auto-stop mic immediately when submit is triggered
+        SpeechRecognition.stopListening();
+        setRecordingStarted(false);
+        resetTranscript();
 
         try {
             const [machineTestAudio, descriptionAudio] = await Promise.all([
                 fetch(machineTestFileRef.current).then(r => r.blob()),
                 fetch(descriptionFileRef.current).then(r => r.blob()),
             ]);
-
-            console.log("Submitting machine test audio, size:", machineTestAudio.size, "type:", machineTestAudio.type);
-            console.log("Submitting description audio, size:", descriptionAudio.size, "type:", descriptionAudio.type);
 
             const [anomalyRes, sttRes] = await Promise.all([
                 fetch(ANOMALY_API, { method: 'POST', body: machineTestAudio, headers: { 'Content-Type': 'application/octet-stream' } }),
@@ -111,13 +112,16 @@ export default function AudioRecording() {
 
             const [anomalyResult, sttResult] = await Promise.all([anomalyRes.json(), sttRes.json()]);
 
-            console.log("Anomaly result:", anomalyResult);
-            console.log("STT result:", sttResult);
-        } catch (err) {
-            console.log("ERROR during submit:", err);
+            if (anomalyResult.error || sttResult.error) {
+                setSubmitError(`API error — anomaly: ${anomalyResult.error || 'ok'} | stt: ${sttResult.error || 'ok'}`);
+            } else {
+                setResults({ anomaly: anomalyResult, stt: sttResult });
+            }
+        } catch (err: any) {
+            setSubmitError(`Submit failed: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
         }
-
-        micPressed();
     }
 
     const {
@@ -125,19 +129,48 @@ export default function AudioRecording() {
         listening,
         resetTranscript,
         browserSupportsSpeechRecognition
-    } = useSpeechRecognition({
-        commands: [
-            { command: 'begin part name', callback: beginPartName },
-            { command: 'end part name', callback: endPartName },
-            { command: 'begin machine test', callback: beginMachineTest },
-            { command: 'end machine test', callback: endMachineTest },
-            { command: 'begin description', callback: beginDescription },
-            { command: 'end description', callback: endDescription },
-            { command: 'submit', callback: submitData },
-        ]
+    } = useSpeechRecognition();
+
+    // Use refs so the polling useEffect always sees current callbacks without stale closures
+    const actionsRef = useRef({
+        beginMachineTest, endMachineTest,
+        beginDescription, endDescription,
+        beginPartName, endPartName,
+        submitData,
+    });
+    useEffect(() => {
+        actionsRef.current = { beginMachineTest, endMachineTest, beginDescription, endDescription, beginPartName, endPartName, submitData };
     });
 
+    // Transcript polling — scans the live transcript for command keywords mid-stream.
+    // Works even when commands are embedded in continuous speech.
+    useEffect(() => {
+        if (!transcript) return;
+        const t = transcript.toLowerCase();
+
+        if (t.includes('start machine test')) {
+            actionsRef.current.beginMachineTest();
+        } else if (t.includes('stop machine test')) {
+            actionsRef.current.endMachineTest();
+        } else if (t.includes('start description')) {
+            actionsRef.current.beginDescription();
+        } else if (t.includes('stop description')) {
+            actionsRef.current.endDescription();
+        } else if (t.includes('start part name')) {
+            actionsRef.current.beginPartName();
+        } else if (t.includes('stop part name')) {
+            // Extract only the text before the stop keyword as the part name
+            const captured = transcript.substring(0, t.indexOf('stop part name')).trim();
+            setPartName(captured || null);
+            setActive(null);
+            resetTranscript();
+        } else if (t.includes('confirm') || t.includes('done') || t.includes('submit')) {
+            actionsRef.current.submitData();
+        }
+    }, [transcript]);
+
     const [recordingStarted, setRecordingStarted] = useState(false);
+    const [showDevPanel, setShowDevPanel] = useState(false);
 
     useEffect(() => {
         if (!listening && recordingStarted) {
@@ -146,28 +179,123 @@ export default function AudioRecording() {
     }, [listening, recordingStarted]);
 
     if (!browserSupportsSpeechRecognition) {
-        console.log("BROWSER UNSUPPORTED");
         return <span>Browser doesn't support speech recognition.</span>;
     }
 
     const micPressed = () => {
-        console.log("MIC PRESSED");
         if (!recordingStarted) {
-            SpeechRecognition.startListening({ language: "en-US", continuous: true });
-            setRecordingStarted(!recordingStarted);
-            console.log("RECORDING STARTED");
+            SpeechRecognition.startListening({ language: 'en-US', continuous: true });
+            setRecordingStarted(true);
         } else {
-            SpeechRecognition.stopListening({ language: "en-US" });
-            setRecordingStarted(!recordingStarted);
-            console.log(transcript);
+            SpeechRecognition.stopListening();
+            setRecordingStarted(false);
             resetTranscript();
-            console.log("RECORDING ENDED");
         }
     };
 
+    const activeLabels: Record<string, string> = {
+        machineTest: '🔴 Recording: Machine Test',
+        description: '🔴 Recording: Description',
+        partName: '🔴 Listening: Part Name',
+    };
+
+    const anomalyStatus = results?.anomaly?.status;
+
     return (
         <div id='recording-screen'>
-            <Microphone micPressed={micPressed} />
+            <div id='status-panel'>
+                <h2>CAT Inspection Tool</h2>
+
+                <div id='mic-row'>
+                    <Microphone micPressed={micPressed} />
+                    <span className={`listen-label ${recordingStarted ? 'active' : ''}`}>
+                        {recordingStarted ? '🎙️ Listening for commands...' : 'Tap mic to start'}
+                    </span>
+                </div>
+
+                {recordingStarted && (
+                    <div id='transcript-box'>
+                        <span className='label'>Heard:</span>
+                        {transcript || <em>say a command...</em>}
+                    </div>
+                )}
+
+                {activeRecordingDisplay && (
+                    <div className='badge badge-recording'>
+                        {activeLabels[activeRecordingDisplay]}
+                    </div>
+                )}
+
+                <div id='recordings-status'>
+                    <div className={`recording-item ${machineTestDone ? 'done' : ''}`}>
+                        {machineTestDone ? '✅' : '⬜'} Machine Test Audio
+                    </div>
+                    <div className={`recording-item ${descriptionDone ? 'done' : ''}`}>
+                        {descriptionDone ? '✅' : '⬜'} Description Audio
+                    </div>
+                    {partName && (
+                        <div className='recording-item done'>✅ Part Name: <strong>{partName}</strong></div>
+                    )}
+                </div>
+
+                <div id='commands-hint'>
+                    <strong>Voice commands:</strong>
+                    <ul>
+                        <li>\"start machine test\" → \"stop machine test\"</li>
+                        <li>\"start description\" → \"stop description\"</li>
+                        <li>\"start part name\" → \"stop part name\"</li>
+                        <li>\"confirm\" or \"done\"</li>
+                    </ul>
+                </div>
+
+                {submitError && <div className='badge badge-error'>{submitError}</div>}
+                {isSubmitting && <div className='badge badge-submitting'>⏳ Submitting to AI...</div>}
+
+                {results && (
+                    <div id='results-panel'>
+                        <div className={`result-status ${anomalyStatus}`}>
+                            {anomalyStatus === 'anomaly' ? '⚠️ ANOMALY DETECTED' : '✅ NORMAL'}
+                        </div>
+                        <div className='result-row'>
+                            <span>Anomaly Score</span>
+                            <strong>{(results.anomaly.anomaly_score * 100).toFixed(1)}%</strong>
+                        </div>
+                        {results.anomaly.machine_type && (
+                            <div className='result-row'>
+                                <span>Machine Type</span>
+                                <strong>{results.anomaly.machine_type}</strong>
+                            </div>
+                        )}
+                        {results.anomaly.anomaly_subtype && (
+                            <div className='result-row'>
+                                <span>Fault Type</span>
+                                <strong>{results.anomaly.anomaly_subtype}</strong>
+                            </div>
+                        )}
+                        {results.stt?.transcript && (
+                            <div className='result-row transcript-row'>
+                                <span>Transcript</span>
+                                <em>{results.stt.transcript}</em>
+                            </div>
+                        )}
+                        <button className='dev-toggle' onClick={() => setShowDevPanel(v => !v)}>
+                            {showDevPanel ? '▲ Hide raw output' : '▼ Show raw output'}
+                        </button>
+                        {showDevPanel && (
+                            <div id='dev-panel'>
+                                <div className='dev-section'>
+                                    <strong>Anomaly API response:</strong>
+                                    <pre>{JSON.stringify(results.anomaly, null, 2)}</pre>
+                                </div>
+                                <div className='dev-section'>
+                                    <strong>Transcription API response:</strong>
+                                    <pre>{JSON.stringify(results.stt, null, 2)}</pre>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

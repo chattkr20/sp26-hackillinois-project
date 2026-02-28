@@ -1,2 +1,19 @@
+# --- Web server ---
 fastapi
 uvicorn[standard]
+
+# --- Modal serverless ---
+modal
+
+# --- Audio / ML (installed inside Modal images; listed here for local dev) ---
+torch==2.2.2
+torchaudio==2.2.2
+transformers==4.41.0
+accelerate
+datasets==2.20.0
+scikit-learn
+numpy
+tqdm
+
+# --- Legacy CNN14 anomaly endpoint (superseded by ai/audio_anomaly.py) ---
+torchlibrosa
