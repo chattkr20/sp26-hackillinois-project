@@ -19,12 +19,13 @@ export default function AudioRecording() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [results, setResults] = useState<{ anomaly: any; stt: any } | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [micError, setMicError] = useState<string | null>(null);
 
     const machineTestFileRef = useRef<string | null>(null);
     const descriptionFileRef = useRef<string | null>(null);
 
-    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob } = useReactMediaRecorder({ audio: true });
-    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob } = useReactMediaRecorder({ audio: true });
+    const { startRecording: startMachineTest, stopRecording: stopMachineTest, mediaBlobUrl: machineTestBlob, status: machineTestStatus } = useReactMediaRecorder({ audio: true });
+    const { startRecording: startDescription, stopRecording: stopDescription, mediaBlobUrl: descriptionBlob, status: descriptionStatus } = useReactMediaRecorder({ audio: true });
 
     useEffect(() => {
         if (machineTestBlob) {
@@ -178,13 +179,26 @@ export default function AudioRecording() {
         }
     }, [listening, recordingStarted]);
 
-    if (!browserSupportsSpeechRecognition) {
-        return <span>Browser doesn't support speech recognition.</span>;
-    }
-
-    const micPressed = () => {
+    const micPressed = async () => {
+        setMicError(null);
         if (!recordingStarted) {
-            SpeechRecognition.startListening({ language: 'en-US', continuous: true });
+            // Explicitly request mic permission first so we get a clear error if denied
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(t => t.stop()); // release immediately, just checking perms
+            } catch (err: any) {
+                const msg = err.name === 'NotAllowedError'
+                    ? 'Microphone permission denied — allow mic access in your browser settings and try again.'
+                    : `Mic error: ${err.message}`;
+                setMicError(msg);
+                return;
+            }
+            try {
+                await SpeechRecognition.startListening({ language: 'en-US', continuous: true });
+            } catch (err: any) {
+                // Speech recognition may fail but media recording can still work
+                console.warn('SpeechRecognition error:', err);
+            }
             setRecordingStarted(true);
         } else {
             SpeechRecognition.stopListening();
@@ -206,18 +220,25 @@ export default function AudioRecording() {
             <div id='status-panel'>
                 <h2>CAT Inspection Tool</h2>
 
-                <div id='mic-row'>
-                    <Microphone micPressed={micPressed} />
-                    <span className={`listen-label ${recordingStarted ? 'active' : ''}`}>
-                        {recordingStarted ? '🎙️ Listening for commands...' : 'Tap mic to start'}
-                    </span>
-                </div>
+                {micError && <div className='badge badge-error'>🚫 {micError}</div>}
 
-                {recordingStarted && (
-                    <div id='transcript-box'>
-                        <span className='label'>Heard:</span>
-                        {transcript || <em>say a command...</em>}
-                    </div>
+                {browserSupportsSpeechRecognition ? (
+                    <>
+                        <div id='mic-row'>
+                            <Microphone micPressed={micPressed} />
+                            <span className={`listen-label ${recordingStarted ? 'active' : ''}`}>
+                                {recordingStarted ? '🎙️ Listening for commands...' : 'Tap mic to start'}
+                            </span>
+                        </div>
+                        {recordingStarted && (
+                            <div id='transcript-box'>
+                                <span className='label'>Heard:</span>
+                                {transcript || <em>say a command...</em>}
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className='badge badge-warn'>⚠️ Voice commands not supported on this browser — use buttons below</div>
                 )}
 
                 {activeRecordingDisplay && (
@@ -225,6 +246,31 @@ export default function AudioRecording() {
                         {activeLabels[activeRecordingDisplay]}
                     </div>
                 )}
+
+                <div id='manual-controls'>
+                    <div className='manual-row'>
+                        <span className='manual-label'>Machine Test</span>
+                        {activeRecordingDisplay === 'machineTest' ? (
+                            <button className='btn-stop' onClick={endMachineTest}>⏹ Stop</button>
+                        ) : (
+                            <button className='btn-start' onClick={beginMachineTest} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+                        )}
+                    </div>
+                    <div className='manual-row'>
+                        <span className='manual-label'>Description</span>
+                        {activeRecordingDisplay === 'description' ? (
+                            <button className='btn-stop' onClick={endDescription}>⏹ Stop</button>
+                        ) : (
+                            <button className='btn-start' onClick={beginDescription} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+                        )}
+                    </div>
+                    <button className='btn-submit' onClick={submitData} disabled={isSubmitting || !machineTestDone || !descriptionDone}>
+                        {isSubmitting ? '⏳ Submitting…' : '✅ Submit'}
+                    </button>
+                    <div className='recorder-status'>
+                        Machine: <code>{machineTestStatus}</code> · Description: <code>{descriptionStatus}</code>
+                    </div>
+                </div>
 
                 <div id='recordings-status'>
                     <div className={`recording-item ${machineTestDone ? 'done' : ''}`}>

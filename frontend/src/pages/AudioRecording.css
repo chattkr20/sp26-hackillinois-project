@@ -67,6 +67,7 @@
 .badge-recording  { background: #fdecea; color: #c62828; }
 .badge-error      { background: #fff3e0; color: #e65100; }
 .badge-submitting { background: #e8f5e9; color: #2e7d32; }
+.badge-warn       { background: #fff8e1; color: #f57f17; }
 
 #recordings-status {
   display: flex;
@@ -167,4 +168,59 @@
   word-break: break-all;
   margin: 0;
   color: #333;
+}
+
+/* ── Manual controls (buttons) ── */
+#manual-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+
+.manual-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manual-label {
+  font-size: 0.9rem;
+  color: #555;
+  flex: 1;
+}
+
+.btn-start, .btn-stop, .btn-submit {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-start:disabled, .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-start  { background: #e3f2fd; color: #1565c0; }
+.btn-start:hover:not(:disabled)  { background: #bbdefb; }
+
+.btn-stop   { background: #fdecea; color: #c62828; }
+.btn-stop:hover  { background: #ffcdd2; }
+
+.btn-submit { background: #1a73e8; color: #fff; width: 100%; padding: 12px; font-size: 1rem; margin-top: 4px; }
+.btn-submit:hover:not(:disabled) { background: #1558b0; }
+
+.recorder-status {
+  font-size: 0.75rem;
+  color: #aaa;
+  text-align: center;
+}
+.recorder-status code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.72rem;
+  color: #666;
 }
