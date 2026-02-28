@@ -49,6 +49,7 @@ image = (
         "numpy<2",
         "fastapi[standard]",
     )
+    .add_local_file("backend/ai/utils.py", "/root/ai_utils.py")
 )
 
 # ---------------------------------------------------------------------------
@@ -137,7 +138,7 @@ def _convert_webm(webm_bytes: bytes) -> bytes:
     """Inline import to avoid circular issues when this module used standalone."""
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from ai.utils import webm_to_wav_bytes
+    from ai_utils import webm_to_wav_bytes
     return webm_to_wav_bytes(webm_bytes)
 
 

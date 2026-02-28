@@ -68,6 +68,7 @@ image = (
         "numpy<2",
         "fastapi[standard]",
     )
+    .add_local_file("backend/ai/utils.py", "/root/ai_utils.py")
 )
 
 # ---------------------------------------------------------------------------
@@ -265,9 +266,7 @@ def _preprocess(webm_bytes: bytes) -> torch.Tensor:
     Returns:
         Tensor of shape (1, clip_samples) on CUDA.
     """
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from ai.utils import webm_to_wav_bytes, load_waveform, pad_or_crop, normalise_waveform
+    from ai_utils import webm_to_wav_bytes, load_waveform, pad_or_crop, normalise_waveform
 
     wav_bytes = webm_to_wav_bytes(webm_bytes)
 
