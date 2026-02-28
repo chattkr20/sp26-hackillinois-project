@@ -27,6 +27,7 @@ chmod +x start.sh
 
 ```
 cd frontend
+npm i
 npm run dev
 ```
 
