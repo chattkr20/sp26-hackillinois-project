@@ -40,8 +40,7 @@ export default function LoginPage() {
 
       <header className="login-header">
         <div className="login-app-title">
-          <span className="title-cat">CAT</span>
-          <span className="title-inspect">INSPECT</span>
+          <span className="title-cat">CAT</span><span className="title-inspect">alyze</span>
         </div>
         <div className="login-logo">
           <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">

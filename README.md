@@ -1,4 +1,4 @@
-# Catty Micro-Pillar
+# CATalyze
 
 **Website**: [https://hackillinois26.milindkumar.dev](https://hackillinois26.milindkumar.dev)
 
@@ -24,7 +24,7 @@
 
 ## What It Does
 
-Catty Micro-Pillar lets a CAT machine operator conduct a hands-free equipment inspection and generate a structured status report. The operator walks through each part of the machine, recording:
+CATalyze lets a CAT machine operator conduct a hands-free equipment inspection and generate a structured status report. The operator walks through each part of the machine, recording:
 
 1. **Machine sound** — native audio of the part running (analyzed for acoustic anomalies)
 2. **Description** — the operator speaking about the part (transcribed via Whisper)

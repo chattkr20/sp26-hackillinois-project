@@ -179,7 +179,7 @@ class ReportGenerator:
         class ReportPDF(FPDF):
             def header(self):
                 self.set_font("Helvetica", "B", 16)
-                self.cell(0, 10, "CAT Equipment Inspection Report", new_x="LMARGIN", new_y="NEXT", align="C")
+                self.cell(0, 10, "CATalyze Inspection Report", new_x="LMARGIN", new_y="NEXT", align="C")
                 self.set_font("Helvetica", "", 9)
                 self.set_text_color(140, 140, 140)
                 self.cell(0, 6, f"Generated: {today}", new_x="LMARGIN", new_y="NEXT", align="C")
@@ -190,7 +190,7 @@ class ReportGenerator:
                 self.set_y(-15)
                 self.set_font("Helvetica", "I", 8)
                 self.set_text_color(140, 140, 140)
-                self.cell(0, 10, f"Page {self.page_no()} | CAT Inspection Tool", align="C")
+                self.cell(0, 10, f"Page {self.page_no()} | CATalyze", align="C")
 
             def section_title(self, title):
                 self.set_font("Helvetica", "B", 11)

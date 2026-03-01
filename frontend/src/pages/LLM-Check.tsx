@@ -102,8 +102,7 @@ export default function LLMCheck() {
 
             <header className='login-header'>
                 <div className='login-app-title'>
-                    <span className='title-cat'>CAT</span>
-                    <span className='title-inspect'>INSPECT</span>
+                    <span className='title-cat'>CAT</span><span className='title-inspect'>alyze</span>
                 </div>
                 <span className='rec-step-label'>▸ STEP 3 · GENERATING REPORT</span>
             </header>

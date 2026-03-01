@@ -267,8 +267,7 @@ export default function AudioRecording() {
 
             <header className='login-header'>
                 <div className='login-app-title'>
-                    <span className='title-cat'>CAT</span>
-                    <span className='title-inspect'>INSPECT</span>
+                    <span className='title-cat'>CAT</span><span className='title-inspect'>alyze</span>
                 </div>
                 <span className='rec-step-label'>▸ STEP 2 · CAPTURE AUDIO</span>
                 <button className='rec-signout-btn' onClick={signOut}>Sign Out</button>

@@ -63,8 +63,7 @@ export default function ReportDisplay() {
             <aside className='report-sidebar'>
                 <div className='report-sidebar-header'>
                     <div className='report-sidebar-title'>
-                        <span className='title-cat'>CAT</span>
-                        <span className='title-inspect'>INSPECT</span>
+                        <span className='title-cat'>CAT</span><span className='title-inspect'>alyze</span>
                     </div>
                     <span className='report-sidebar-step'>▸ REPORT</span>
                 </div>
