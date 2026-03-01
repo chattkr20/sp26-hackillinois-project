@@ -1,15 +1,20 @@
-"Task: Extract structured information from the provided audio transcript and use the provided JSON to decide whether to flag the anomalous part based on the score provided and relay that data in the JSON format provided below. 
+Task: Extract structured information from the provided audio transcript and use the provided JSON to decide whether to flag the anomalous part based on the score provided and relay that data in the JSON format provided below. 
 Identify every "Part Name" mentioned and provide the corresponding "Part Details".
 
 Guidelines:
-1. List each part clearly and it should be chosen from this JSON {“part_names”: “Bucket”, “Bucket cylinder and linkage”, “Stick”, “Boom cylinders”, “Underneath of the machine”, “Carbody”, “Undercarriage”, “Steps & handholds”, “Batteries and hold downs”, “Windshield wipers”, “Fire extinguisher”, “Engine coolant”, “Primary/secondary fuel filters”, “Air filter”, “Hydraulic oil tank”, “Radiator”, “Hydraulic pilot oil filter”, “AC condenser”, “Hydraulic oil cooler”, “Lights”, “Mirrors”, “Hydraulic oil filters”, “Overall machine”, “Electric motor”, “Inverter”, “Battery pack”, “Battery management system”, “Controller electronics”, “Charger”, “Pressure Relief Valve”, “Seat”, “Seat belt and mounting”, “Horn”, “Travel alarm”, “Indicators”, “Monitor panel”, “Switches”, “Heating system”, “Cab interior”, “Fan”}.
+1. List each part clearly and it should be chosen from this JSON {"part_names": "Bucket", "Bucket cylinder and linkage", "Stick", "Boom cylinders", "Underneath of the machine", "Carbody", "Undercarriage", "Steps & handholds", "Batteries and hold downs", "Windshield wipers", "Fire extinguisher", "Engine coolant", "Primary/secondary fuel filters", "Air filter", "Hydraulic oil tank", "Radiator", "Hydraulic pilot oil filter", "AC condenser", "Hydraulic oil cooler", "Lights", "Mirrors", "Hydraulic oil filters", "Overall machine", "Electric motor", "Inverter", "Battery pack", "Battery management system", "Controller electronics", "Charger", "Pressure Relief Valve", "Seat", "Seat belt and mounting", "Horn", "Travel alarm", "Indicators", "Monitor panel", "Switches", "Heating system", "Cab interior", "Fan"}.
 2. If details are not explicitly mentioned for a part, use null as a replacement.
 3. Use a structured JSON format for the output.
-4. If anomalous activity is detected= "anomaly_score": 1, then append "Possible Anomalous activity detected: Shows anomaly_subtype." to the part_details at the end
+4. If anomalous activity is detected= "anomaly_score": 1, then append "Possible Anomalous activity detected: Shows anomaly_subtype." to the part_details at the end, and append a suggestion to the part_details after the “Possible Anomalous activity” section which is “Suggestion for Part Improvement: “ followed a way to fix the part or fix the problem the part is facing.
 
 Example 1:
 {
-  Anomaly:
+
+Visual Anomaly:
+
+{'anomaly_score': 0.4095, 'status': 'normal', 'confidence': 0.5905, 'mode': 'finetuned', 'label': 'No visible defect'}
+
+  Audio Anomaly:
 
 {
   "status": "anomaly",
@@ -31,13 +36,13 @@ Transcription:
 
 }
 Reasoning: 
-The transcript mentions "battery pack". The details are a full description of the leak and surrounding corrosion. The anomaly_score is 0, so Guideline 4 (appending the anomaly flag) is not applied.
+The transcript mentions "battery pack". The details are a full description of the leak and surrounding corrosion. The audio anomaly_score is 0 and the visual anomaly_score is 0.4095 which are both low, so Guideline 4 (appending the anomaly flag) is not applied.
 
 Output:
-[
+[ 
   {
     "part_name": "Battery pack",
-    "part_details": "A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage."
+    "part_details": "A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage. Suggestion for Part Improvement: replace the current battery pack with a new battery pack that does not show signs of leaks in the valve or other faults."
   }
 ]
 
@@ -65,18 +70,22 @@ Transcription:
 
 }
 Reasoning: 
-The transcript mentions the "cabin fan" (part name "Fan"). The details describe reduced airflow and a suspicion of obstruction. The anomaly_score is 1 and the anomaly_subtype is "obstruction", so Guideline 4 is applied to append the anomaly flag to the part details.
+The transcript mentions the "cabin fan" (part name "Fan"). The details describe reduced airflow and a suspicion of obstruction. The anomaly_score is 1 and the anomaly_subtype is "obstruction", the visual anomaly_score is high at 0.7305, so Guideline 4 is applied to append the anomaly flag to the part details.
 Output:
-[
+[ 
   {
     "part_name": "Fan",
-    "part_details": "There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. Additionally, the operation sound seems off, particularly when the fan is running at higher speeds. There is suspicion that something may be obstructing the fan or that there could be a mechanical issue. Possible Anomalous activity detected: Shows obstruction."
+    "part_details": "There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. Additionally, the operation sound seems off, particularly when the fan is running at higher speeds. There is suspicion that something may be obstructing the fan or that there could be a mechanical issue. Possible Anomalous activity detected: Shows obstruction. Suggestion for Part Improvement: analyze the fan for signs of obstruction such as imperfections in fan blades or blockages in the air supply to the fan; remove any obstructions."
   }
 ]
 
 Example 3:
 {
-  Anomaly:
+ Visual Anomaly:
+
+{'anomaly_score': 0.9035, 'status': 'anomaly', 'confidence': 0.5905, 'mode': 'finetuned', 'label': 'Potential defect detected (visual)’'}
+
+  Audio Anomaly:
 
 {
   "status": "anomaly",
@@ -98,13 +107,13 @@ Transcription:
 
 }
 Reasoning: 
-The transcript mentions the "cabin cooling fan" (part name "Fan"). The details describe the fan operating smoothly. However, the anomaly_score is 1 and the anomaly_subtype is "imbalance", so Guideline 4 is applied to append the anomaly flag to the part details.
+The transcript mentions the "cabin cooling fan" (part name "Fan"). The details describe the fan operating smoothly. However, the audio anomaly_score is 1 and the anomaly_subtype is "imbalance", the visual anomaly_score is high at 0.9305, so Guideline 4 is applied to append the anomaly flag to the part details.
 
 Output:
-[
+[ 
   {
     "part_name": "Fan",
-    "part_details": "The cabin cooling fan is operating smoothly and efficiently. There are no unusual noises, vibrations, or airflow issues. The fan is delivering the expected level of air circulation and cooling within the cabin. Possible Anomalous activity detected: Shows imbalance."
+    "part_details": "The cabin cooling fan is operating smoothly and efficiently. There are no unusual noises, vibrations, or airflow issues. The fan is delivering the expected level of air circulation and cooling within the cabin. Possible Anomalous activity detected: Shows imbalance. Suggestion for Part Improvement: ensure the fan is level and air flow is unconstrained by the angle of the fan."
   }
 ]
 
@@ -112,4 +121,4 @@ Current Transcript for Extraction:
 "{{INSERT_TRANSCRIPT_HERE}}"
 Current Anomalous Report for decision
 "{{INSERT_ANOMALOUS_REPORT_HERE}}"
-Let's think step by step:"
+Let's think step by step:
