@@ -122,7 +122,7 @@ class ReportGenerator:
         # ── 2. Run inference ─────────────────────────────────────────────────
         result = self.pipe(
             messages,
-            max_new_tokens=1024,
+            max_new_tokens=1500,
             temperature=0.2,
             do_sample=True,
         )
@@ -134,44 +134,35 @@ class ReportGenerator:
                 raw = raw[4:]
         raw = raw.strip()
 
-        # ── Derive overall status from anomaly scores ────────────────────────
-        audio_score = anomaly.get("anomaly_score", 0.0)
-        visual_score = image_anomaly.get("anomaly_score", 0.0) if image_anomaly else 0.0
-        visual_status = image_anomaly.get("status", "") if image_anomaly else ""
-        if audio_score >= 1.0 or visual_status == "anomaly":
-            derived_status = "FAIL"
-        elif audio_score >= 0.3 or visual_score >= 0.5:
-            derived_status = "MONITOR"
-        else:
-            derived_status = "PASS"
-
+        # ── Parse rich LLM output ─────────────────────────────────────────────
         try:
             llm_data = json.loads(raw)
         except Exception:
-            llm_data = []
+            llm_data = {}
 
-        # New prompt returns a flat list [{part_name, part_details}]
-        summary = ""
-        if isinstance(llm_data, list):
-            raw_parts = llm_data
-        elif isinstance(llm_data, dict):
-            # Backwards-compat if model still returns {summary, parts}
-            summary = sanitize(llm_data.get("summary", ""))
-            raw_parts = llm_data.get("parts", [])
-        else:
-            raw_parts = []
+        # Extract new schema fields
+        overall_risk_rating = sanitize(llm_data.get("overall_risk_rating", "LOW"))
+        executive_summary = sanitize(llm_data.get("executive_summary", ""))
+        immediate_actions = [sanitize(a) for a in llm_data.get("immediate_actions", [])]
+        raw_parts = llm_data.get("parts", [])
 
         parts = [
             {
                 "part_name": sanitize(p.get("part_name", "")),
                 "part_details": sanitize(p.get("part_details", "") or ""),
-                "status": derived_status,
+                "recommended_action": sanitize(p.get("recommended_action", "")),
+                "urgency": sanitize(p.get("urgency", "MONITOR")),
             }
             for p in raw_parts
         ]
 
         if not parts and part_name != "Not specified":
-            parts = [{"part_name": part_name, "part_details": transcript[:120] or "See transcript", "status": derived_status}]
+            parts = [{
+                "part_name": part_name,
+                "part_details": transcript[:120] or "See transcript",
+                "recommended_action": "Review findings with maintenance team.",
+                "urgency": "MONITOR"
+            }]
 
         # ── 3. Generate PDF ──────────────────────────────────────────────────
         today = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
@@ -204,21 +195,54 @@ class ReportGenerator:
                 self.set_font("Helvetica", "", 9)
                 self.cell(0, 6, value, new_x="LMARGIN", new_y="NEXT")
 
-            def part_row(self, name, status, details):
+            def part_row(self, name, urgency, details, action):
                 self.set_font("Helvetica", "", 9)
-                colors = {"FAIL": (220, 50, 50), "MONITOR": (230, 160, 0), "PASS": (30, 160, 60)}
-                self.cell(70, 6, name)
-                r, g, b = colors.get(status.upper(), (80, 80, 80))
+                colors = {"IMMEDIATE": (220, 50, 50), "SCHEDULED": (230, 160, 0), "MONITOR": (30, 160, 60)}
+                self.cell(60, 6, name)
+                r, g, b = colors.get(urgency.upper(), (80, 80, 80))
                 self.set_text_color(r, g, b)
                 self.set_font("Helvetica", "B", 9)
-                self.cell(22, 6, status.upper())
+                self.cell(28, 6, urgency.upper())
                 self.set_text_color(0, 0, 0)
                 self.set_font("Helvetica", "", 9)
                 self.multi_cell(0, 6, details or "—")
+                if action:
+                    self.set_font("Helvetica", "I", 8)
+                    self.set_text_color(60, 60, 120)
+                    self.multi_cell(0, 5, f"→ {action}")
+                    self.set_text_color(0, 0, 0)
                 self.ln(1)
+
+            def risk_badge(self, rating):
+                colors = {"HIGH": (220, 50, 50), "MEDIUM": (230, 160, 0), "LOW": (30, 160, 60)}
+                r, g, b = colors.get(rating.upper(), (80, 80, 80))
+                self.set_fill_color(r, g, b)
+                self.set_text_color(255, 255, 255)
+                self.set_font("Helvetica", "B", 14)
+                self.cell(0, 12, f"OVERALL RISK: {rating.upper()}", new_x="LMARGIN", new_y="NEXT", align="C", fill=True)
+                self.set_text_color(0, 0, 0)
+                self.ln(4)
 
         pdf = ReportPDF()
         pdf.add_page()
+
+        # ── Risk badge at top ──
+        pdf.risk_badge(overall_risk_rating)
+
+        # ── Executive summary ──
+        if executive_summary:
+            pdf.section_title("Executive Summary")
+            pdf.set_font("Helvetica", "", 10)
+            pdf.multi_cell(0, 6, executive_summary)
+            pdf.ln(4)
+
+        # ── Immediate actions ──
+        if immediate_actions:
+            pdf.section_title("Immediate Actions Required")
+            pdf.set_font("Helvetica", "", 9)
+            for i, action in enumerate(immediate_actions, 1):
+                pdf.multi_cell(0, 6, f"{i}. {action}")
+            pdf.ln(4)
 
         pdf.section_title("Inspection Details")
         pdf.kv_row("Operator", f"{operator_name} (ID: {operator_id})")
@@ -265,25 +289,20 @@ class ReportGenerator:
             except Exception as e:
                 print(f"[report] Could not embed image: {e}")
 
-        if summary:
-            pdf.section_title("AI Inspection Summary")
-            pdf.set_font("Helvetica", "", 9)
-            pdf.multi_cell(0, 6, summary)
-            pdf.ln(4)
-
         if parts:
             pdf.section_title("Part-by-Part Analysis")
             pdf.set_font("Helvetica", "B", 9)
             pdf.set_fill_color(245, 245, 245)
-            pdf.cell(70, 6, "Component", fill=True)
-            pdf.cell(22, 6, "Status", fill=True)
-            pdf.cell(0, 6, "Details", fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(60, 6, "Component", fill=True)
+            pdf.cell(28, 6, "Urgency", fill=True)
+            pdf.cell(0, 6, "Findings & Recommendation", fill=True, new_x="LMARGIN", new_y="NEXT")
             pdf.ln(1)
             for part in parts:
                 pdf.part_row(
                     str(part.get("part_name", "")),
-                    str(part.get("status", "PASS")),
+                    str(part.get("urgency", "MONITOR")),
                     str(part.get("part_details", "")),
+                    str(part.get("recommended_action", "")),
                 )
             pdf.ln(4)
 
@@ -298,6 +317,8 @@ class ReportGenerator:
         pdf_bytes = pdf.output()
         return {
             "pdf_base64": base64.b64encode(bytes(pdf_bytes)).decode("utf-8"),
-            "summary": summary,
+            "overall_risk_rating": overall_risk_rating,
+            "executive_summary": executive_summary,
+            "immediate_actions": immediate_actions,
             "parts": parts,
         }
