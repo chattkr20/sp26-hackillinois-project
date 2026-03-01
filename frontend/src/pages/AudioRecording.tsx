@@ -3,6 +3,7 @@ import './AudioRecording.css'
 import { useState, useEffect, useRef } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { useReactMediaRecorder } from 'react-media-recorder';
+import { useNavigate } from 'react-router-dom';
 
 const ANOMALY_API = 'https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run';
 const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
@@ -10,6 +11,13 @@ const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
 type ActiveRecording = 'machineTest' | 'description' | 'partName' | null;
 
 export default function AudioRecording() {
+    const navigate = useNavigate();
+
+
+    useEffect(() => {
+        const operator = localStorage.getItem('catInspectOperator');
+        if (!operator) navigate('/login');
+    }, []);
 
     const activeRecordingRef = useRef<ActiveRecording>(null);
     const [activeRecordingDisplay, setActiveRecordingDisplay] = useState<ActiveRecording>(null);

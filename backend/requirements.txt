@@ -21,3 +21,7 @@ torchlibrosa
 # --- LLM / Gemini ---
 google-generativeai
 requests
+
+# --- PDF report generation ---
+fpdf2
+pypdf
