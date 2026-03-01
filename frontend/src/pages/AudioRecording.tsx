@@ -62,6 +62,9 @@ export default function AudioRecording() {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [micError, setMicError] = useState<string | null>(null);
     const [recordingStarted, setRecordingStarted] = useState(false);
+    // Ref so callbacks always see the current value without stale closures
+    const recordingStartedRef = useRef(false);
+    useEffect(() => { recordingStartedRef.current = recordingStarted; }, [recordingStarted]);
 
     // Store raw Blobs instead of blob URLs — avoids a second fetch round-trip
     const machineTestBlobRef = useRef<Blob | null>(null);
@@ -95,24 +98,35 @@ export default function AudioRecording() {
         resetTranscript();
     }, [resetTranscript]);
 
+    // Restart speech recognition after a native recording finishes (if voice mode is on)
+    const restartSpeech = useCallback(() => {
+        if (recordingStartedRef.current) {
+            SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+        }
+    }, []);
+
     const beginMachineTest = useCallback(async () => {
         if (activeRecordingRef.current !== null) return;
         setMachineTestDone(false);
         setActive('machineTest');
         resetTranscript();
+        // Pause speech recognition so it releases the mic for native MediaRecorder
+        SpeechRecognition.stopListening();
         try {
             await nativeStart((blob) => {
                 machineTestBlobRef.current = blob;
                 setMachineTestDone(true);
+                restartSpeech();
             });
         } catch (err: any) {
             setMicError(`Could not start machine test recording: ${err.message}`);
             setActive(null);
+            restartSpeech();
         }
-    }, [nativeStart, resetTranscript]);
+    }, [nativeStart, resetTranscript, restartSpeech]);
 
     const endMachineTest = useCallback(() => {
-        nativeStop();
+        nativeStop(); // onstop callback will call restartSpeech
         setActive(null);
         resetTranscript();
     }, [nativeStop, resetTranscript]);
@@ -122,19 +136,23 @@ export default function AudioRecording() {
         setDescriptionDone(false);
         setActive('description');
         resetTranscript();
+        // Pause speech recognition so it releases the mic for native MediaRecorder
+        SpeechRecognition.stopListening();
         try {
             await nativeStart((blob) => {
                 descriptionBlobRef.current = blob;
                 setDescriptionDone(true);
+                restartSpeech();
             });
         } catch (err: any) {
             setMicError(`Could not start description recording: ${err.message}`);
             setActive(null);
+            restartSpeech();
         }
-    }, [nativeStart, resetTranscript]);
+    }, [nativeStart, resetTranscript, restartSpeech]);
 
     const endDescription = useCallback(() => {
-        nativeStop();
+        nativeStop(); // onstop callback will call restartSpeech
         setActive(null);
         resetTranscript();
     }, [nativeStop, resetTranscript]);

@@ -240,14 +240,26 @@
 /* ── Commands hint ── */
 .rec-hint {
   font-family: var(--font-mono);
-  font-size: 0.67rem;
-  color: var(--text-muted);
-  line-height: 1.8;
-  letter-spacing: 0.06em;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.9;
+  letter-spacing: 0.04em;
+  border-top: 1px solid var(--border-hi);
+  padding-top: 14px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-hi);
+  padding: 12px 14px;
 }
-.rec-hint ul { margin: 6px 0 0; padding-left: 14px; }
+.rec-hint strong {
+  color: var(--yellow);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+.rec-hint ul { margin: 0; padding-left: 14px; }
+.rec-hint li { color: #bbb; }
 
 /* ── Inline error ── */
 .rec-error {
