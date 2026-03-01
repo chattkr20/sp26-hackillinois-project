@@ -1,0 +1,305 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Share+Tech+Mono&display=swap');
+
+/* ── Root layout ── */
+.report-root {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  font-family: var(--font-main);
+  background: var(--black);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.report-sidebar {
+  width: 280px;
+  min-width: 240px;
+  background: var(--surface-2);
+  border-right: 1px solid var(--border-hi);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+}
+
+.report-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 68px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--yellow);
+  flex-shrink: 0;
+}
+
+.report-sidebar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.report-sidebar-step {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.report-sidebar-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+/* ── Status badge ── */
+.report-status-badge {
+  border: 1px solid;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-status-badge.anomaly {
+  background: rgba(239,83,80,0.08);
+  border-color: rgba(239,83,80,0.35);
+}
+
+.report-status-badge.normal {
+  background: rgba(76,175,80,0.06);
+  border-color: rgba(76,175,80,0.3);
+}
+
+.report-status-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+
+.report-status-label.anomaly { color: #ef5350; }
+.report-status-label.normal  { color: #4caf50; }
+
+.report-score {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+/* ── Info block ── */
+.report-info-block {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.report-info-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.report-info-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: right;
+  word-break: break-word;
+  max-width: 140px;
+}
+
+/* ── Section eyebrow ── */
+.report-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+
+/* ── AI Summary ── */
+.report-summary-block {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+.report-summary-text {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Parts list ── */
+.report-parts-block {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-part-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  gap: 8px;
+}
+
+.report-part-name {
+  color: var(--text-dim);
+  flex: 1;
+  word-break: break-word;
+}
+
+.report-part-status {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+}
+
+/* ── Actions ── */
+.report-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.report-btn-download {
+  background: var(--yellow);
+  color: var(--black);
+  border: none;
+  padding: 12px 0;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.report-btn-download:hover {
+  background: #ffe033;
+  box-shadow: 0 4px 16px rgba(255,205,17,0.3);
+  transform: translateY(-1px);
+}
+
+.report-btn-new {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border-hi);
+  padding: 10px 0;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.report-btn-new:hover { border-color: var(--text-dim); color: var(--text); }
+
+.report-btn-logout {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 8px 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.report-btn-logout:hover { color: var(--text-dim); }
+
+/* ── PDF pane ── */
+.report-pdf-pane {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  background: #1a1a1a;
+}
+
+.report-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.report-pdf-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+}
+
+/* ── Empty state ── */
+.report-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+  background: var(--black);
+  font-family: var(--font-main);
+}
+
+.report-empty p {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+.report-btn-start-new {
+  background: var(--yellow);
+  color: var(--black);
+  border: none;
+  padding: 12px 28px;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.report-btn-start-new:hover { background: #ffe033; }

@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Share+Tech+Mono&display=swap');
+
+/* ── Page shell — matches login-root ── */
+.llm-root {
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--text);
+  font-family: var(--font-main);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.llm-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+/* ── Card ── */
+.llm-check-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-hi);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Spinner ── */
+.llm-spinner { width: 64px; height: 64px; }
+
+.spinner-ring {
+  width: 64px;
+  height: 64px;
+  border: 4px solid rgba(255,205,17,0.15);
+  border-top-color: var(--yellow);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Text ── */
+.llm-stage {
+  font-family: var(--font-main);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+  min-height: 1.4em;
+}
+
+.llm-sub {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-align: center;
+}
+
+/* ── Steps ── */
+.llm-steps {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.llm-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 9px 12px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.llm-step.active {
+  background: rgba(255,205,17,0.07);
+  border-color: rgba(255,205,17,0.25);
+  color: var(--yellow);
+}
+
+.llm-step.done {
+  color: #4caf50;
+  border-color: rgba(76,175,80,0.25);
+  background: rgba(76,175,80,0.05);
+}
+
+.step-icon { font-size: 1rem; }
+
+/* ── Summary preview ── */
+.llm-summary-preview {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.summary-row span {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.summary-row strong { color: var(--text); font-weight: 700; }
+.summary-row strong.red   { color: #ef5350; }
+.summary-row strong.green { color: #4caf50; }
+
+/* ── Error state ── */
+.llm-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.error-title {
+  font-family: var(--font-main);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ef5350;
+  margin: 0;
+}
+
+.error-msg {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0;
+  word-break: break-word;
+  letter-spacing: 0.04em;
+}
+
+.error-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.btn-retry {
+  background: var(--yellow);
+  color: var(--black);
+  border: none;
+  padding: 10px 22px;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-retry:hover { background: #ffe033; box-shadow: 0 4px 16px rgba(255,205,17,0.3); }
+
+.btn-back {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border-hi);
+  padding: 10px 22px;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-back:hover { border-color: var(--text-dim); color: var(--text); }

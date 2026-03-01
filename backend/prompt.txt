@@ -1,0 +1,33 @@
+"Task: Extract structured information from the provided audio transcript and use the provided JSON to decide whether to flag the anomalous part based on the score provided and relay that data in the JSON format provided below. 
+Identify every "Part Name" mentioned and provide the corresponding "Part Details" (such as dimensions, material, condition, or associated SKU).
+
+Guidelines:
+1. List each part clearly.
+2. If details are not explicitly mentioned for a part, label it as "Not specified".
+3. Use a structured JSON format for the output.
+
+Example 1:
+{
+  "transcript": "This fan is looking really good. Everything about it is in pristine condition and I have no worries about the state of this fan. It is moving air at just an incredible rate and it's doing so smoothly without error and without any audible source of... problems. End description. Stop description.",
+  "language": "en",
+  "duration_seconds": 26.28,
+  "inspection_notes": []
+}
+Reasoning: 
+- The speaker mentions "fan". The detail provided is "pristine condition".
+- The speaker mentions "gasket". The details provided are "4-inch", "rubber", and "looks brand new".
+Output:
+[
+  {"part_name": "fan", "part_details": "carbon buildup"},
+  {"part_name": "gasket", "part_details": "4-inch, rubber, brand new"}
+]
+
+Example 2:
+Transcript: [Insert another relevant example here]
+...
+
+Current Transcript for Extraction:
+"{{INSERT_TRANSCRIPT_HERE}}"
+Current Anomalous Report for decision
+"{{INSERT_TRANSCRIPT_HERE}}"
+Let's think step by step:"
