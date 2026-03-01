@@ -2,19 +2,25 @@
 
 ## HackIllinois Info
 
-**Project Track:**
+**Project Track:** Caterpillar
 
-**Awards:**
+**HackIllinois Awards:**
+
+**Company Awards:**
 
 ## Project Details
 
 ### Running Backend Locally
 
-`cd backend`
+```
+cd backend
+```
 
 #### Windows
 
-```./start.ps1```
+```
+./start.ps1
+```
 
 #### Mac / Linux
 
@@ -27,6 +33,7 @@ chmod +x start.sh
 
 ```
 cd frontend
+npm i
 npm run dev
 ```
 
