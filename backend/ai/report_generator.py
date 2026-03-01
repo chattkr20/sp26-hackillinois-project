@@ -32,6 +32,7 @@ image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
         "vllm==0.6.6.post1",
+        "transformers>=4.48.0",  # required for Qwen2Tokenizer.all_special_tokens_extended
         "fastapi[standard]",
         "fpdf2",
         "huggingface_hub",
@@ -63,7 +64,7 @@ If no parts are mentioned, infer from context. Do not include markdown fences or
     image=image,
     gpu="A10G",
     timeout=300,
-    container_idle_timeout=300,  # stay warm for 5 min between requests
+    scaledown_window=300,  # stay warm for 5 min between requests
 )
 class ReportGenerator:
 
