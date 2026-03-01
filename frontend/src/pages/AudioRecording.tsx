@@ -31,34 +31,28 @@ export default function AudioRecording() {
 
     const machineTestBlobUrlRef = useRef<string | null>(null);
     const descriptionBlobUrlRef = useRef<string | null>(null);
+    // Which recording slot is this blob for — resolved when onstop fires
+    const pendingSlotRef = useRef<'machineTest' | 'description' | null>(null);
 
     const {
-        startRecording: startMachineTest,
-        stopRecording: stopMachineTest,
-        mediaBlobUrl: machineTestBlobUrl,
-        status: machineTestStatus,
+        startRecording,
+        stopRecording,
+        mediaBlobUrl,
+        status: recorderStatus,
     } = useReactMediaRecorder({ audio: true });
 
-    const {
-        startRecording: startDescription,
-        stopRecording: stopDescription,
-        mediaBlobUrl: descriptionBlobUrl,
-        status: descriptionStatus,
-    } = useReactMediaRecorder({ audio: true });
-
+    // Route the finished blob to the correct slot
     useEffect(() => {
-        if (machineTestBlobUrl) {
-            machineTestBlobUrlRef.current = machineTestBlobUrl;
+        if (!mediaBlobUrl) return;
+        if (pendingSlotRef.current === 'machineTest') {
+            machineTestBlobUrlRef.current = mediaBlobUrl;
             setMachineTestDone(true);
-        }
-    }, [machineTestBlobUrl]);
-
-    useEffect(() => {
-        if (descriptionBlobUrl) {
-            descriptionBlobUrlRef.current = descriptionBlobUrl;
+        } else if (pendingSlotRef.current === 'description') {
+            descriptionBlobUrlRef.current = mediaBlobUrl;
             setDescriptionDone(true);
         }
-    }, [descriptionBlobUrl]);
+        pendingSlotRef.current = null;
+    }, [mediaBlobUrl]);
 
     const {
         transcript,
@@ -89,13 +83,14 @@ export default function AudioRecording() {
     const beginMachineTest = () => {
         if (activeRecordingRef.current !== null) return;
         setMachineTestDone(false);
-        startMachineTest();
+        pendingSlotRef.current = 'machineTest';
+        startRecording();
         setActive('machineTest');
         resetTranscript();
     };
 
     const endMachineTest = () => {
-        stopMachineTest();
+        stopRecording();
         setActive(null);
         resetTranscript();
     };
@@ -103,13 +98,14 @@ export default function AudioRecording() {
     const beginDescription = () => {
         if (activeRecordingRef.current !== null) return;
         setDescriptionDone(false);
-        startDescription();
+        pendingSlotRef.current = 'description';
+        startRecording();
         setActive('description');
         resetTranscript();
     };
 
     const endDescription = () => {
-        stopDescription();
+        stopRecording();
         setActive(null);
         resetTranscript();
     };
@@ -298,7 +294,6 @@ export default function AudioRecording() {
                             ) : (
                                 <button className='rec-btn-start' onClick={beginMachineTest} disabled={activeRecordingDisplay !== null}>▶ Start</button>
                             )}
-                            <span className='rec-status-badge'>{machineTestStatus}</span>
                         </div>
 
                         <div className='rec-row'>
@@ -308,7 +303,6 @@ export default function AudioRecording() {
                             ) : (
                                 <button className='rec-btn-start' onClick={beginDescription} disabled={activeRecordingDisplay !== null}>▶ Start</button>
                             )}
-                            <span className='rec-status-badge'>{descriptionStatus}</span>
                         </div>
 
                         <div className='rec-status-list'>
