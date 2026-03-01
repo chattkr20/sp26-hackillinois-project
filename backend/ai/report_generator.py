@@ -37,15 +37,19 @@ image = (
 )
 
 
-def _build_prompt(transcript: str, anomaly_json: str, image_anomaly_json: str) -> str:
-    """Load prompt.txt from the baked-in file and fill in the three placeholders."""
+def _build_prompt(transcript: str, audio_anomaly: dict, visual_anomaly: dict) -> str:
+    """Load prompt.txt and fill in the two placeholders with combined anomaly data."""
     with open("/root/prompt.txt", "r") as f:
         template = f.read()
+
+    visual_str = str(visual_anomaly) if visual_anomaly else "Not available"
+    audio_str = json.dumps(audio_anomaly, indent=2) if audio_anomaly else "Not available"
+    combined_anomaly = f"Visual Anomaly:\n\n{visual_str}\n\nAudio Anomaly:\n\n{audio_str}"
+
     return (
         template
         .replace("{{INSERT_TRANSCRIPT_HERE}}", transcript)
-        .replace("{{INSERT_ANOMALOUS_REPORT_HERE}}", anomaly_json)
-        .replace("{{INSERT_IMAGE_ANOMALY_REPORT_HERE}}", image_anomaly_json)
+        .replace("{{INSERT_ANOMALOUS_REPORT_HERE}}", combined_anomaly)
     )
 
 
@@ -110,8 +114,8 @@ class ReportGenerator:
         # ── 1. Build prompt from prompt.txt ──────────────────────────────────
         prompt = _build_prompt(
             transcript=transcript,
-            anomaly_json=json.dumps(anomaly, indent=2),
-            image_anomaly_json=json.dumps(image_anomaly, indent=2) if image_anomaly else "Not available",
+            audio_anomaly=anomaly,
+            visual_anomaly=image_anomaly,
         )
         messages = [{"role": "user", "content": prompt}]
 
@@ -130,24 +134,44 @@ class ReportGenerator:
                 raw = raw[4:]
         raw = raw.strip()
 
+        # ── Derive overall status from anomaly scores ────────────────────────
+        audio_score = anomaly.get("anomaly_score", 0.0)
+        visual_score = image_anomaly.get("anomaly_score", 0.0) if image_anomaly else 0.0
+        visual_status = image_anomaly.get("status", "") if image_anomaly else ""
+        if audio_score >= 1.0 or visual_status == "anomaly":
+            derived_status = "FAIL"
+        elif audio_score >= 0.3 or visual_score >= 0.5:
+            derived_status = "MONITOR"
+        else:
+            derived_status = "PASS"
+
         try:
             llm_data = json.loads(raw)
         except Exception:
-            llm_data = {"summary": raw, "parts": []}
+            llm_data = []
 
-        summary = sanitize(llm_data.get("summary", ""))
+        # New prompt returns a flat list [{part_name, part_details}]
+        summary = ""
+        if isinstance(llm_data, list):
+            raw_parts = llm_data
+        elif isinstance(llm_data, dict):
+            # Backwards-compat if model still returns {summary, parts}
+            summary = sanitize(llm_data.get("summary", ""))
+            raw_parts = llm_data.get("parts", [])
+        else:
+            raw_parts = []
+
         parts = [
             {
                 "part_name": sanitize(p.get("part_name", "")),
-                "part_details": sanitize(p.get("part_details", "")),
-                "status": sanitize(p.get("status", "PASS")),
+                "part_details": sanitize(p.get("part_details", "") or ""),
+                "status": derived_status,
             }
-            for p in llm_data.get("parts", [])
+            for p in raw_parts
         ]
 
         if not parts and part_name != "Not specified":
-            status = "FAIL" if anomaly_status == "anomaly" else "PASS"
-            parts = [{"part_name": part_name, "part_details": transcript[:120] or "See transcript", "status": status}]
+            parts = [{"part_name": part_name, "part_details": transcript[:120] or "See transcript", "status": derived_status}]
 
         # ── 3. Generate PDF ──────────────────────────────────────────────────
         today = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
