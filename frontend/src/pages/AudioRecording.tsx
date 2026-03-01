@@ -1,4 +1,4 @@
-import Microphone from '../components/Mic';
+import { Mic } from 'lucide-react';
 import './AudioRecording.css'
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
@@ -255,85 +255,116 @@ export default function AudioRecording() {
     };
 
     const activeLabels: Record<string, string> = {
-        machineTest: '🔴 Recording: Machine Test',
-        description: '🔴 Recording: Description',
-        partName: '🔴 Listening: Part Name',
+        machineTest: 'REC — Machine Test Audio',
+        description: 'REC — Description Audio',
+        partName: 'LISTENING — Part Name',
     };
 
     return (
-        <div id='recording-screen'>
-            <div id='status-panel'>
-                <h2>CAT Inspection Tool</h2>
+        <div className='rec-root'>
+            <div className='login-bg-grid' />
 
-                {micError && <div className='badge badge-error'>🚫 {micError}</div>}
-
-                <div id='mic-row'>
-                    <Microphone micPressed={micPressed} />
-                    <span className={`listen-label ${recordingStarted ? 'active' : ''}`}>
-                        {recordingStarted ? '🎙️ Listening for commands...' : 'Tap mic for voice commands'}
-                    </span>
+            <header className='login-header'>
+                <div className='login-app-title'>
+                    <span className='title-cat'>CAT</span>
+                    <span className='title-inspect'>INSPECT</span>
                 </div>
+                <span className='rec-step-label'>▸ STEP 2 · CAPTURE AUDIO</span>
+            </header>
 
-                {recordingStarted && (
-                    <div id='transcript-box'>
-                        <span className='label'>Heard:</span>
-                        {transcript || <em>say a command...</em>}
+            <main className='rec-main'>
+                <div className='rec-card'>
+                    <div className='rec-card-header'>
+                        <p className='rec-card-eyebrow'>▸ AUDIO CAPTURE</p>
+                        <h1 className='rec-card-title'>Record Inspection</h1>
                     </div>
-                )}
 
-                {activeRecordingDisplay && (
-                    <div className='badge badge-recording'>
-                        {activeLabels[activeRecordingDisplay]}
-                    </div>
-                )}
+                    <div className='rec-card-body'>
+                        {micError && <div className='rec-badge rec-badge-error'>{micError}</div>}
 
-                <div id='manual-controls'>
-                    <div className='manual-row'>
-                        <span className='manual-label'>Machine Test</span>
-                        {activeRecordingDisplay === 'machineTest' ? (
-                            <button className='btn-stop' onClick={endMachineTest}>⏹ Stop</button>
-                        ) : (
-                            <button className='btn-start' onClick={beginMachineTest} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+                        {/* Mic button — activates voice command listening only */}
+                        <div className='rec-mic-row'>
+                            <div
+                                className={`rec-mic-btn ${recordingStarted ? 'active' : ''}`}
+                                onClick={micPressed}
+                                role='button'
+                                aria-label={recordingStarted ? 'Stop voice commands' : 'Start voice commands'}
+                            >
+                                <Mic color={recordingStarted ? '#FFCD11' : '#555'} size={34} />
+                            </div>
+                            <span className={`rec-listen-label ${recordingStarted ? 'active' : ''}`}>
+                                {recordingStarted ? '● Listening for commands' : 'Tap to enable voice commands'}
+                            </span>
+                        </div>
+
+                        {recordingStarted && (
+                            <div className='rec-transcript'>
+                                {transcript || <em style={{ color: 'var(--text-muted)' }}>say a command...</em>}
+                            </div>
                         )}
-                    </div>
-                    <div className='manual-row'>
-                        <span className='manual-label'>Description</span>
-                        {activeRecordingDisplay === 'description' ? (
-                            <button className='btn-stop' onClick={endDescription}>⏹ Stop</button>
-                        ) : (
-                            <button className='btn-start' onClick={beginDescription} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+
+                        {activeRecordingDisplay && (
+                            <div className='rec-badge rec-badge-recording'>
+                                {activeLabels[activeRecordingDisplay]}
+                            </div>
                         )}
-                    </div>
-                    <button className='btn-submit' onClick={submitData} disabled={isSubmitting || !machineTestDone || !descriptionDone}>
-                        {isSubmitting ? '⏳ Submitting…' : '✅ Submit'}
-                    </button>
-                </div>
 
-                <div id='recordings-status'>
-                    <div className={`recording-item ${machineTestDone ? 'done' : ''}`}>
-                        {machineTestDone ? '✅' : '⬜'} Machine Test Audio
-                    </div>
-                    <div className={`recording-item ${descriptionDone ? 'done' : ''}`}>
-                        {descriptionDone ? '✅' : '⬜'} Description Audio
-                    </div>
-                    {partName && (
-                        <div className='recording-item done'>✅ Part Name: <strong>{partName}</strong></div>
-                    )}
-                </div>
+                        <p className='rec-section-label'>Recordings</p>
 
-                <div id='commands-hint'>
-                    <strong>Voice commands:</strong>
-                    <ul>
-                        <li>"start machine test" → "stop machine test"</li>
-                        <li>"start description" → "stop description"</li>
-                        <li>"start part name" [say name] "stop part name"</li>
-                        <li>"confirm" or "submit"</li>
-                    </ul>
-                </div>
+                        <div className='rec-row'>
+                            <span className='rec-row-label'>Machine Test</span>
+                            {activeRecordingDisplay === 'machineTest' ? (
+                                <button className='rec-btn-stop' onClick={endMachineTest}>⏹ Stop</button>
+                            ) : (
+                                <button className='rec-btn-start' onClick={beginMachineTest} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+                            )}
+                        </div>
 
-                {submitError && <div className='badge badge-error'>{submitError}</div>}
-                {isSubmitting && <div className='badge badge-submitting'>⏳ Submitting to AI...</div>}
-            </div>
+                        <div className='rec-row'>
+                            <span className='rec-row-label'>Description</span>
+                            {activeRecordingDisplay === 'description' ? (
+                                <button className='rec-btn-stop' onClick={endDescription}>⏹ Stop</button>
+                            ) : (
+                                <button className='rec-btn-start' onClick={beginDescription} disabled={activeRecordingDisplay !== null}>▶ Start</button>
+                            )}
+                        </div>
+
+                        <div className='rec-status-list'>
+                            <div className={`rec-status-item ${machineTestDone ? 'done' : ''}`}>
+                                {machineTestDone ? '✓' : '○'} Machine Test Audio
+                            </div>
+                            <div className={`rec-status-item ${descriptionDone ? 'done' : ''}`}>
+                                {descriptionDone ? '✓' : '○'} Description Audio
+                            </div>
+                            {partName && (
+                                <div className='rec-status-item done'>✓ Part: <strong>{partName}</strong></div>
+                            )}
+                        </div>
+
+                        <button className='rec-btn-submit' onClick={submitData} disabled={isSubmitting || !machineTestDone || !descriptionDone}>
+                            <span>{isSubmitting ? 'Submitting…' : 'Submit Inspection'}</span>
+                            <span>⟶</span>
+                        </button>
+
+                        {submitError && <div className='rec-error'>{submitError}</div>}
+                        {isSubmitting && <div className='rec-badge rec-badge-submitting'>Sending to AI analysis...</div>}
+
+                        <div className='rec-hint'>
+                            <strong>Voice commands:</strong>
+                            <ul>
+                                <li>"start machine test" → "stop machine test"</li>
+                                <li>"start description" → "stop description"</li>
+                                <li>"start part name" [say name] "stop part name"</li>
+                                <li>"confirm" or "submit"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer className='login-footer'>
+                © {new Date().getFullYear()} Caterpillar Inc. · Internal Use Only
+            </footer>
         </div>
     );
 }

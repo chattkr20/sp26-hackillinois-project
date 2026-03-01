@@ -1,7 +1,284 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Share+Tech+Mono&display=swap');
+
+/* ── Page shell ── */
+.rec-root {
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--text);
+  font-family: var(--font-main);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.rec-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 24px 32px;
+}
+
+/* ── Card ── */
+.rec-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-hi);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rec-card-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rec-card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--yellow);
+  letter-spacing: 0.18em;
+  margin-bottom: 4px;
+}
+
+.rec-card-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0;
+}
+
+.rec-card-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Mic row ── */
+.rec-mic-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+}
+
+.rec-mic-btn {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 2px solid var(--border-hi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.rec-mic-btn.active {
+  border-color: var(--yellow);
+  background: rgba(255,205,17,0.08);
+  box-shadow: 0 0 0 6px rgba(255,205,17,0.1);
+}
+
+.rec-listen-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.rec-listen-label.active { color: var(--yellow); }
+
+/* ── Transcript ── */
+.rec-transcript {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  min-height: 36px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Badges ── */
+.rec-badge {
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  font-weight: 700;
+}
+.rec-badge-recording  { background: rgba(198,40,40,0.15);   color: #ef5350; border: 1px solid rgba(239,83,80,0.3); }
+.rec-badge-error      { background: rgba(230,81,0,0.12);    color: #ff7043; border: 1px solid rgba(255,112,67,0.3); }
+.rec-badge-submitting { background: rgba(255,205,17,0.08);  color: var(--yellow); border: 1px solid rgba(255,205,17,0.25); }
+
+/* ── Section divider label ── */
+.rec-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+/* ── Recording control rows ── */
+.rec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rec-row-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  flex: 1;
+  text-transform: uppercase;
+}
+
+/* ── Buttons ── */
+.rec-btn-start,
+.rec-btn-stop,
+.rec-btn-submit {
+  border: none;
+  font-family: var(--font-main);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.rec-btn-start:disabled,
+.rec-btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.rec-btn-start {
+  background: var(--yellow);
+  color: var(--black);
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+.rec-btn-start:hover:not(:disabled) {
+  background: #ffe033;
+  box-shadow: 0 4px 14px rgba(255,205,17,0.3);
+  transform: translateY(-1px);
+}
+
+.rec-btn-stop {
+  background: transparent;
+  color: #ef5350;
+  border: 1px solid #ef5350;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+.rec-btn-stop:hover { background: rgba(239,83,80,0.1); }
+
+.rec-btn-submit {
+  background: var(--yellow);
+  color: var(--black);
+  width: 100%;
+  padding: 13px 20px;
+  font-size: 1rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rec-btn-submit:hover:not(:disabled) {
+  background: #ffe033;
+  box-shadow: 0 6px 20px rgba(255,205,17,0.3);
+  transform: translateY(-1px);
+}
+
+/* ── Status items ── */
+.rec-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rec-status-item {
+  padding: 9px 12px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-status-item.done {
+  border-color: rgba(255,205,17,0.35);
+  color: var(--yellow);
+  background: rgba(255,205,17,0.06);
+}
+
+/* ── Commands hint ── */
+.rec-hint {
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  letter-spacing: 0.06em;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.rec-hint ul { margin: 6px 0 0; padding-left: 14px; }
+
+/* ── Inline error ── */
+.rec-error {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #ef5350;
+  background: rgba(239,83,80,0.1);
+  border: 1px solid rgba(239,83,80,0.25);
+  padding: 10px 14px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Step badge in header ── */
+.rec-step-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .rec-card-body   { padding: 16px; }
+  .rec-card-header { padding: 16px 16px 12px; }
+}
+
+/* ── keep old id selectors from crashing if any stale ref */
 #recording-screen {
   width: 100vw;
   min-height: 100vh;
-  background-color: #f4f6f8;
+  background-color: var(--black);
   display: flex;
   align-items: flex-start;
   justify-content: center;

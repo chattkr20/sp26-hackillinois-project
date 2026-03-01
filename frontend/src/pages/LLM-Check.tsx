@@ -63,12 +63,19 @@ export default function LLMCheck() {
     };
 
     return (
-        <div className='llm-check-root'>
-            <div className='llm-check-card'>
-                <div className='llm-check-logo'>
+        <div className='llm-root'>
+            <div className='login-bg-grid' />
+
+            <header className='login-header'>
+                <div className='login-app-title'>
                     <span className='title-cat'>CAT</span>
                     <span className='title-inspect'>INSPECT</span>
                 </div>
+                <span className='rec-step-label'>▸ STEP 3 · GENERATING REPORT</span>
+            </header>
+
+            <main className='llm-main'>
+            <div className='llm-check-card'>
 
                 {stage !== 'error' ? (
                     <>
@@ -119,6 +126,11 @@ export default function LLMCheck() {
                     </div>
                 )}
             </div>
+            </main>
+
+            <footer className='login-footer'>
+                © {new Date().getFullYear()} Caterpillar Inc. · Internal Use Only
+            </footer>
         </div>
     );
 }
