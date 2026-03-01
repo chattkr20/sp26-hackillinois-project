@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './LLM-Check.css';
 
 const REPORT_API = 'https://milindkumar1--cat-report-generator-reportgenerator-gener-a5b1ab.modal.run';
-const IMAGE_ANOMALY_API = 'https://milindkumar1--cat-image-anomaly-imageanomaly-detect-anomaly.modal.run';
+const IMAGE_ANOMALY_API = 'https://milindkumar1--cat-image-anomaly-imageanomalydetector-det-8f11cb.modal.run';
 
 export default function LLMCheck() {
     const navigate = useNavigate();
