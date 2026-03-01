@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './LLM-Check.css';
 
-// GPU endpoint: Qwen2.5-7B on A10G via vLLM
 const REPORT_API = 'https://milindkumar1--cat-report-generator-reportgenerator-gener-a5b1ab.modal.run';
 
 export default function LLMCheck() {
