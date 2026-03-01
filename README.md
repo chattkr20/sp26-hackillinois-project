@@ -1,14 +1,16 @@
-# The Greatest Hack Project EVER!!!
+# Catty Micro-Pillar
+
+**Website**: [https://hackillinois26.milindkumar.dev](https://hackillinois26.milindkumar.dev)
 
 ## HackIllinois Info
 
 **Project Track:** Caterpillar
 
-**HackIllinois Awards:**
+**HackIllinois Prizes:** Most Creative, Best UI UX Design
 
-**Company Awards:**
+**Company Prizes:** Best Use of OpenAI API
 
-## Project Details
+## Running the Project Locally
 
 ### Running Backend Locally
 
@@ -37,6 +39,4 @@ npm i
 npm run dev
 ```
 
-### AI Usage
-
-none
+It is recommended you use **Chrome** to run the localhost
