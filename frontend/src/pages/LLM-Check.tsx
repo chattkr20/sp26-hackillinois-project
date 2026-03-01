@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './LLM-Check.css';
 
 const REPORT_API = 'https://milindkumar1--cat-report-generator-reportgenerator-gener-a5b1ab.modal.run';
-const IMAGE_ANOMALY_API = 'https://milindkumar1--cat-image-anomaly-imageanomalydetector-det-8f11cb.modal.run';
+const IMAGE_ANOMALY_API = 'https://milindkumar1--cat-image-anomaly-detect-anomaly.modal.run';
 
 export default function LLMCheck() {
     const navigate = useNavigate();
@@ -35,13 +35,12 @@ export default function LLMCheck() {
                 if (payload.imageDataUrl) {
                     setStage('imageAnalyzing');
                     try {
-                        // Convert data URL → blob → raw bytes
-                        const res = await fetch(payload.imageDataUrl);
-                        const blob = await res.blob();
+                        // Extract base64 from data URL and send as JSON
+                        const image_b64 = (payload.imageDataUrl as string).split(',')[1] ?? '';
                         const imgRes = await fetch(IMAGE_ANOMALY_API, {
                             method: 'POST',
-                            body: blob,
-                            headers: { 'Content-Type': blob.type || 'image/jpeg' },
+                            body: JSON.stringify({ image_b64 }),
+                            headers: { 'Content-Type': 'application/json' },
                         });
                         if (imgRes.ok) {
                             imageAnomalyResult = await imgRes.json();
