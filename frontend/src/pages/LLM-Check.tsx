@@ -3,13 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './LLM-Check.css';
 
 const REPORT_API = 'https://milindkumar1--cat-report-generator-reportgenerator-gener-a5b1ab.modal.run';
+const IMAGE_ANOMALY_API = 'https://milindkumar1--cat-image-anomaly-imageanomaly-detect-anomaly.modal.run';
 
 export default function LLMCheck() {
     const navigate = useNavigate();
     const location = useLocation();
     const payload = location.state as Record<string, any> | null;
 
-    const [stage, setStage] = useState<'analyzing' | 'generating' | 'error'>('analyzing');
+    const [stage, setStage] = useState<'analyzing' | 'imageAnalyzing' | 'generating' | 'error'>('analyzing');
     const [error, setError] = useState<string | null>(null);
     const [dot, setDot] = useState('');
 
@@ -29,11 +30,40 @@ export default function LLMCheck() {
                 setStage('analyzing');
                 await new Promise(r => setTimeout(r, 800));
 
+                // ── Optional: visual anomaly from captured image ──────────
+                let imageAnomalyResult: Record<string, any> | null = null;
+                if (payload.imageDataUrl) {
+                    setStage('imageAnalyzing');
+                    try {
+                        // Convert data URL → blob → raw bytes
+                        const res = await fetch(payload.imageDataUrl);
+                        const blob = await res.blob();
+                        const imgRes = await fetch(IMAGE_ANOMALY_API, {
+                            method: 'POST',
+                            body: blob,
+                            headers: { 'Content-Type': blob.type || 'image/jpeg' },
+                        });
+                        if (imgRes.ok) {
+                            imageAnomalyResult = await imgRes.json();
+                        }
+                    } catch {
+                        // Image analysis is optional — continue without it
+                    }
+                }
+
                 setStage('generating');
+                // Strip imageDataUrl before sending to report backend (too large)
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { imageDataUrl: _imgDataUrl, ...payloadWithoutImage } = payload as Record<string, any>;
+                const reportPayload = {
+                    ...payloadWithoutImage,
+                    ...(imageAnomalyResult ? { image_anomaly: imageAnomalyResult } : {}),
+                };
+
                 const res = await fetch(REPORT_API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify(reportPayload),
                 });
 
                 if (!res.ok) {
@@ -46,7 +76,7 @@ export default function LLMCheck() {
 
                 if (!data.pdf_base64) throw new Error('No PDF returned from API');
 
-                navigate('/report', { state: { ...data, ...payload } });
+                navigate('/report', { state: { ...data, ...reportPayload, imageDataUrl: payload.imageDataUrl } });
             } catch (err: any) {
                 if (!cancelled) setError(err.message);
                 setStage('error');
@@ -59,6 +89,7 @@ export default function LLMCheck() {
 
     const stageMessages: Record<string, string> = {
         analyzing: 'Analyzing anomaly results',
+        imageAnalyzing: 'Analyzing inspection photo',
         generating: 'Generating inspection report with AI',
     };
 
@@ -90,6 +121,14 @@ export default function LLMCheck() {
                                 <span className='step-icon'>{stage === 'analyzing' ? '⏳' : '✅'}</span>
                                 Acoustic anomaly processed
                             </div>
+                            {payload?.imageDataUrl && (
+                                <div className={`llm-step ${
+                                    stage === 'imageAnalyzing' ? 'active' : (stage === 'generating' ? 'done' : '')
+                                }`}>
+                                    <span className='step-icon'>{stage === 'imageAnalyzing' ? '⏳' : (stage === 'generating' ? '✅' : '⬜')}</span>
+                                    Visual anomaly analysis
+                                </div>
+                            )}
                             <div className={`llm-step ${stage === 'generating' ? 'active' : ''}`}>
                                 <span className='step-icon'>{stage === 'generating' ? '⏳' : '⬜'}</span>
                                 AI report generation

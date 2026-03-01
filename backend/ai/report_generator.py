@@ -34,17 +34,20 @@ image = (
     .run_function(_download_model)
 )
 
-PROMPT_TEMPLATE = """You are a CAT equipment inspection AI. Extract structured information from the transcript and anomaly report below.
+PROMPT_TEMPLATE = """You are a CAT equipment inspection AI. Extract structured information from the transcript and anomaly reports below.
 
 Transcript: "{{TRANSCRIPT}}"
 
-Anomaly Report:
+Acoustic Anomaly Report:
 {{ANOMALY_JSON}}
 
+Visual (Image) Anomaly Report:
+{{IMAGE_ANOMALY_JSON}}
+
 Return ONLY a JSON object with exactly two keys:
-1. "summary" (string): 2-3 sentence plain English inspection summary.
+1. "summary" (string): 2-3 sentence plain English inspection summary that considers BOTH acoustic and visual findings.
 2. "parts" (array): [{"part_name": str, "part_details": str, "status": "PASS"|"MONITOR"|"FAIL"}]
-If no parts are mentioned, infer from context. No markdown fences, no extra text."""
+If the visual report shows an anomaly, that should influence the status. If no parts are mentioned, infer from context. No markdown fences, no extra text."""
 
 
 @app.cls(
@@ -90,6 +93,7 @@ class ReportGenerator:
 
         anomaly = payload.get("anomaly", {})
         stt = payload.get("stt", {})
+        image_anomaly = payload.get("image_anomaly", {})
         part_name = sanitize(payload.get("part_name") or "Not specified")
         operator_name = sanitize(payload.get("operator_name") or "Unknown")
         operator_id = sanitize(payload.get("operator_id") or "N/A")
@@ -98,12 +102,17 @@ class ReportGenerator:
         anomaly_status = anomaly.get("status", "unknown")
         machine_type = sanitize(anomaly.get("machine_type") or "Unknown")
         anomaly_subtype = sanitize(anomaly.get("anomaly_subtype") or "None detected")
+        img_status = image_anomaly.get("status", "")
+        img_score = image_anomaly.get("anomaly_score", None)
+        img_confidence = image_anomaly.get("confidence", None)
+        img_mode = sanitize(image_anomaly.get("mode") or "N/A")
 
         # ── 1. Build prompt ──────────────────────────────────────────────────
         prompt = (
             PROMPT_TEMPLATE
             .replace("{{TRANSCRIPT}}", transcript)
             .replace("{{ANOMALY_JSON}}", json.dumps(anomaly, indent=2))
+            .replace("{{IMAGE_ANOMALY_JSON}}", json.dumps(image_anomaly, indent=2) if image_anomaly else "Not available")
         )
         messages = [{"role": "user", "content": prompt}]
 
@@ -200,6 +209,17 @@ class ReportGenerator:
         pdf.kv_row("Anomaly Score", f"{anomaly_score * 100:.1f}%")
         pdf.kv_row("Fault Subtype", anomaly_subtype)
         pdf.ln(6)
+
+        if image_anomaly:
+            pdf.section_title("Visual (Image) Anomaly Analysis")
+            img_result_text = "ANOMALY DETECTED" if img_status == "anomaly" else ("NORMAL" if img_status == "normal" else "N/A")
+            pdf.kv_row("Result", img_result_text)
+            if img_score is not None:
+                pdf.kv_row("Anomaly Score", f"{img_score * 100:.1f}%")
+            if img_confidence is not None:
+                pdf.kv_row("Confidence", f"{img_confidence * 100:.1f}%")
+            pdf.kv_row("Mode", img_mode)
+            pdf.ln(6)
 
         if summary:
             pdf.section_title("AI Inspection Summary")

@@ -531,3 +531,22 @@
   font-size: 0.72rem;
   color: #666;
 }
+
+/* Image preview */
+.rec-image-preview {
+  margin: 8px 0 4px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 205, 17, 0.35);
+  background: #0b0b0b;
+  max-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rec-image-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+}

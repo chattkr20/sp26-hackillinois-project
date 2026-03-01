@@ -28,9 +28,24 @@ export default function AudioRecording() {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [micError, setMicError] = useState<string | null>(null);
     const [recordingStarted, setRecordingStarted] = useState(false);
+    const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+    const imageInputRef = useRef<HTMLInputElement | null>(null);
 
     const machineTestBlobUrlRef = useRef<string | null>(null);
     const descriptionBlobUrlRef = useRef<string | null>(null);
+
+    const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => setImageDataUrl(reader.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    const clearImage = () => {
+        setImageDataUrl(null);
+        if (imageInputRef.current) imageInputRef.current.value = '';
+    };
 
     const {
         startRecording: startMachineTest,
@@ -157,6 +172,7 @@ export default function AudioRecording() {
                         part_name: partName,
                         operator_name: operator.name,
                         operator_id: operator.id,
+                        imageDataUrl: imageDataUrl ?? undefined,
                     },
                 });
             }
@@ -292,6 +308,34 @@ export default function AudioRecording() {
                         {activeRecordingDisplay && (
                             <div className='rec-badge rec-badge-recording'>
                                 {activeLabels[activeRecordingDisplay]}
+                            </div>
+                        )}
+
+                        <p className='rec-section-label'>Visual Inspection Photo</p>
+
+                        {/* Hidden file input — opens camera on mobile, file picker on desktop */}
+                        <input
+                            ref={imageInputRef}
+                            type='file'
+                            accept='image/*'
+                            capture='environment'
+                            style={{ display: 'none' }}
+                            onChange={handleImageCapture}
+                        />
+
+                        <div className='rec-row'>
+                            <span className='rec-row-label'>Photo</span>
+                            <button className='rec-btn-start' onClick={() => imageInputRef.current?.click()}>
+                                {imageDataUrl ? '🔄 Retake' : '📷 Capture'}
+                            </button>
+                            {imageDataUrl && (
+                                <button className='rec-btn-stop' style={{ marginLeft: 8 }} onClick={clearImage}>✕ Remove</button>
+                            )}
+                        </div>
+
+                        {imageDataUrl && (
+                            <div className='rec-image-preview'>
+                                <img src={imageDataUrl} alt='Captured inspection photo' />
                             </div>
                         )}
 
