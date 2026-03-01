@@ -1,6 +1,7 @@
 """
 Modal.com GPU endpoint for CAT inspection report generation.
-vLLM 0.7.2 + Qwen2.5-7B-Instruct on A10G.
+Uses transformers + torch directly (no vLLM) to avoid tokenizer conflicts.
+Model: Phi-3.5-mini-instruct on A10G GPU.
 """
 
 import base64
@@ -11,18 +12,21 @@ import modal
 
 app = modal.App("cat-report-generator")
 
-MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+MODEL_ID = "microsoft/Phi-3.5-mini-instruct"
 
 
 def _download_model():
-    from huggingface_hub import snapshot_download
-    snapshot_download(MODEL_ID, ignore_patterns=["*.pt", "*.gguf"])
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    AutoTokenizer.from_pretrained(MODEL_ID)
+    AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype="auto")
 
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "vllm==0.7.2",
+        "torch==2.5.1",
+        "transformers==4.48.3",
+        "accelerate",
         "fastapi[standard]",
         "fpdf2",
         "huggingface_hub",
@@ -53,18 +57,19 @@ class ReportGenerator:
 
     @modal.enter()
     def load_model(self):
-        from vllm import LLM, SamplingParams
-        self.llm = LLM(
-            model=MODEL_ID,
-            max_model_len=4096,
-            gpu_memory_utilization=0.90,
-            dtype="bfloat16",
+        import torch
+        from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            torch_dtype=torch.bfloat16,
+            device_map="cuda",
         )
-        self.sampling_params = SamplingParams(
-            temperature=0.2,
-            max_tokens=1024,
+        self.pipe = pipeline(
+            "text-generation",
+            model=model,
+            tokenizer=tokenizer,
         )
-        self.tokenizer = self.llm.get_tokenizer()
 
     @modal.fastapi_endpoint(method="POST")
     def generate_report(self, payload: dict) -> dict:
@@ -88,13 +93,15 @@ class ReportGenerator:
             .replace("{{ANOMALY_JSON}}", json.dumps(anomaly, indent=2))
         )
         messages = [{"role": "user", "content": prompt}]
-        formatted = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
 
         # ── 2. Run inference ─────────────────────────────────────────────────
-        outputs = self.llm.generate([formatted], self.sampling_params)
-        raw = outputs[0].outputs[0].text.strip()
+        result = self.pipe(
+            messages,
+            max_new_tokens=1024,
+            temperature=0.2,
+            do_sample=True,
+        )
+        raw = result[0]["generated_text"][-1]["content"].strip()
 
         if raw.startswith("```"):
             raw = raw.split("```")[1]
