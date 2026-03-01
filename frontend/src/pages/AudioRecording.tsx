@@ -1,7 +1,8 @@
 import { Mic } from 'lucide-react';
 import './AudioRecording.css'
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { useReactMediaRecorder } from 'react-media-recorder';
 import { useNavigate } from 'react-router-dom';
 
 const ANOMALY_API = 'https://milindkumar1--cat-audio-anomaly-detect-anomaly.modal.run';
@@ -9,93 +10,6 @@ const STT_API = 'https://milindkumar1--cat-speech-to-text-transcribe.modal.run';
 
 type ActiveRecording = 'machineTest' | 'description' | 'partName' | null;
 
-const log = (...args: any[]) => console.log('[CAT-REC]', ...args);
-const err = (...args: any[]) => console.error('[CAT-REC]', ...args);
-
-// ── Native MediaRecorder helpers ─────────────────────────────────────────────
-
-function useNativeRecorder() {
-    const mrRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<Blob[]>([]);
-    const pendingStopRef = useRef(false);   // stop() called while getUserMedia was still pending
-    const [recStatus, setRecStatus] = useState<string>('idle');
-
-    const start = useCallback(async (onStop: (blob: Blob) => void) => {
-        log('start() called');
-        pendingStopRef.current = false;
-
-        // Stop any existing recorder first
-        if (mrRef.current && mrRef.current.state !== 'inactive') {
-            mrRef.current.stop();
-        }
-
-        let stream: MediaStream;
-        try {
-            log('Requesting getUserMedia...');
-            setRecStatus('requesting-mic');
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            log('getUserMedia OK, tracks:', stream.getAudioTracks().map(t => `${t.label} readyState=${t.readyState}`));
-        } catch (e: any) {
-            err('getUserMedia FAILED:', e.name, e.message);
-            setRecStatus(`error: ${e.name}`);
-            throw e;
-        }
-
-        // If stop() was called while we were waiting for mic permission, abort cleanly
-        if (pendingStopRef.current) {
-            log('Pending stop detected — aborting before start');
-            stream.getTracks().forEach(t => t.stop());
-            setRecStatus('idle');
-            return;
-        }
-
-        // Pick best supported MIME type
-        const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', ''];
-        const mimeType = mimeTypes.find(m => m === '' || MediaRecorder.isTypeSupported(m)) ?? '';
-        log('Using MIME type:', mimeType || '(browser default)');
-
-        const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-        log('MediaRecorder created, state:', mr.state, 'actual mimeType:', mr.mimeType);
-
-        chunksRef.current = [];
-        mr.ondataavailable = (e) => {
-            log(`ondataavailable: size=${e.data.size}, total chunks=${chunksRef.current.length + (e.data.size > 0 ? 1 : 0)}`);
-            if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-        mr.onerror = (e: any) => {
-            err('MediaRecorder onerror:', e);
-            setRecStatus(`mr-error: ${e.error?.message ?? String(e)}`);
-        };
-        mr.onstop = () => {
-            log('onstop fired. chunks:', chunksRef.current.length, 'bytes:', chunksRef.current.reduce((s, b) => s + b.size, 0));
-            stream.getTracks().forEach(t => t.stop());
-            const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
-            log('Final blob — size:', blob.size, 'type:', blob.type);
-            setRecStatus(`done: ${blob.size}b`);
-            onStop(blob);
-        };
-
-        mrRef.current = mr;
-        mr.start(250);
-        log('mr.start(250) called, state:', mr.state);
-        setRecStatus('recording');
-    }, []);
-
-    const stop = useCallback(() => {
-        log('stop() called. mrRef state:', mrRef.current?.state ?? 'none');
-        if (mrRef.current && mrRef.current.state === 'recording') {
-            mrRef.current.stop();
-        } else {
-            // getUserMedia may still be pending — flag it so start() aborts when it resolves
-            log('Recorder not ready yet — setting pendingStop flag');
-            pendingStopRef.current = true;
-        }
-    }, []);
-
-    return { start, stop, recStatus };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AudioRecording() {
     const navigate = useNavigate();
@@ -115,11 +29,36 @@ export default function AudioRecording() {
     const [micError, setMicError] = useState<string | null>(null);
     const [recordingStarted, setRecordingStarted] = useState(false);
 
-    // Store raw Blobs instead of blob URLs — avoids a second fetch round-trip
-    const machineTestBlobRef = useRef<Blob | null>(null);
-    const descriptionBlobRef = useRef<Blob | null>(null);
+    const machineTestBlobUrlRef = useRef<string | null>(null);
+    const descriptionBlobUrlRef = useRef<string | null>(null);
 
-    const { start: nativeStart, stop: nativeStop, recStatus } = useNativeRecorder();
+    const {
+        startRecording: startMachineTest,
+        stopRecording: stopMachineTest,
+        mediaBlobUrl: machineTestBlobUrl,
+        status: machineTestStatus,
+    } = useReactMediaRecorder({ audio: true });
+
+    const {
+        startRecording: startDescription,
+        stopRecording: stopDescription,
+        mediaBlobUrl: descriptionBlobUrl,
+        status: descriptionStatus,
+    } = useReactMediaRecorder({ audio: true });
+
+    useEffect(() => {
+        if (machineTestBlobUrl) {
+            machineTestBlobUrlRef.current = machineTestBlobUrl;
+            setMachineTestDone(true);
+        }
+    }, [machineTestBlobUrl]);
+
+    useEffect(() => {
+        if (descriptionBlobUrl) {
+            descriptionBlobUrlRef.current = descriptionBlobUrl;
+            setDescriptionDone(true);
+        }
+    }, [descriptionBlobUrl]);
 
     const {
         transcript,
@@ -135,65 +74,48 @@ export default function AudioRecording() {
 
     // ── Recording actions ────────────────────────────────────────────────────
 
-    const beginPartName = useCallback(() => {
+    const beginPartName = () => {
         if (activeRecordingRef.current !== null) return;
         setActive('partName');
         resetTranscript();
-    }, [resetTranscript]);
+    };
 
-    const endPartName = useCallback((currentTranscript: string) => {
+    const endPartName = (currentTranscript: string) => {
         setPartName(currentTranscript.trim() || null);
         setActive(null);
         resetTranscript();
-    }, [resetTranscript]);
+    };
 
-    // Restart speech recognition after a native recording finishes (if voice mode is on)
-    const beginMachineTest = useCallback(async () => {
+    const beginMachineTest = () => {
         if (activeRecordingRef.current !== null) return;
         setMachineTestDone(false);
+        startMachineTest();
         setActive('machineTest');
         resetTranscript();
-        try {
-            await nativeStart((blob) => {
-                machineTestBlobRef.current = blob;
-                setMachineTestDone(true);
-            });
-        } catch (err: any) {
-            setMicError(`Could not start machine test recording: ${err.message}`);
-            setActive(null);
-        }
-    }, [nativeStart, resetTranscript]);
+    };
 
-    const endMachineTest = useCallback(() => {
-        nativeStop();
+    const endMachineTest = () => {
+        stopMachineTest();
         setActive(null);
         resetTranscript();
-    }, [nativeStop, resetTranscript]);
+    };
 
-    const beginDescription = useCallback(async () => {
+    const beginDescription = () => {
         if (activeRecordingRef.current !== null) return;
         setDescriptionDone(false);
+        startDescription();
         setActive('description');
         resetTranscript();
-        try {
-            await nativeStart((blob) => {
-                descriptionBlobRef.current = blob;
-                setDescriptionDone(true);
-            });
-        } catch (err: any) {
-            setMicError(`Could not start description recording: ${err.message}`);
-            setActive(null);
-        }
-    }, [nativeStart, resetTranscript]);
+    };
 
-    const endDescription = useCallback(() => {
-        nativeStop();
+    const endDescription = () => {
+        stopDescription();
         setActive(null);
         resetTranscript();
-    }, [nativeStop, resetTranscript]);
+    };
 
-    const submitData = useCallback(async () => {
-        if (!machineTestBlobRef.current || !descriptionBlobRef.current) {
+    const submitData = async () => {
+        if (!machineTestBlobUrlRef.current || !descriptionBlobUrlRef.current) {
             setSubmitError('Missing recordings — record both machine test and description first.');
             return;
         }
@@ -204,15 +126,20 @@ export default function AudioRecording() {
         resetTranscript();
 
         try {
+            const [machineTestAudio, descriptionAudio] = await Promise.all([
+                fetch(machineTestBlobUrlRef.current).then(r => r.blob()),
+                fetch(descriptionBlobUrlRef.current).then(r => r.blob()),
+            ]);
+
             const [anomalyRes, sttRes] = await Promise.all([
                 fetch(ANOMALY_API, {
                     method: 'POST',
-                    body: machineTestBlobRef.current,
+                    body: machineTestAudio,
                     headers: { 'Content-Type': 'application/octet-stream' },
                 }),
                 fetch(STT_API, {
                     method: 'POST',
-                    body: descriptionBlobRef.current,
+                    body: descriptionAudio,
                     headers: { 'Content-Type': 'application/octet-stream' },
                 }),
             ]);
@@ -233,12 +160,12 @@ export default function AudioRecording() {
                     },
                 });
             }
-        } catch (err: any) {
-            setSubmitError(`Submit failed: ${err.message}`);
+        } catch (e: any) {
+            setSubmitError(`Submit failed: ${e.message}`);
         } finally {
             setIsSubmitting(false);
         }
-    }, [partName, navigate, resetTranscript]);
+    };
 
     // ── Keep actionsRef fresh so voice command handler never has stale closures ──
     const actionsRef = useRef({ beginMachineTest, endMachineTest, beginDescription, endDescription, beginPartName, endPartName, submitData });
@@ -333,15 +260,6 @@ export default function AudioRecording() {
                     </div>
 
                     <div className='rec-card-body'>
-                        {/* ── DIAGNOSTIC PANEL — remove before production ── */}
-                        <pre style={{fontSize:'11px',background:'#111',color:'#0f0',padding:'8px',borderRadius:'4px',marginBottom:'12px',overflowX:'auto'}}>
-{`recStatus       : ${recStatus}
-machineTestDone : ${machineTestDone} | blob: ${machineTestBlobRef.current?.size ?? 'none'}b
-descriptionDone : ${descriptionDone} | blob: ${descriptionBlobRef.current?.size ?? 'none'}b
-partName        : ${partName ?? '(empty)'}
-activeRecording : ${activeRecordingDisplay ?? 'none'}`}
-                        </pre>
-                        {/* ─────────────────────────────────────────────── */}
                         {micError && <div className='rec-badge rec-badge-error'>{micError}</div>}
 
                         {/* Mic button — activates voice command listening only */}
@@ -376,19 +294,21 @@ activeRecording : ${activeRecordingDisplay ?? 'none'}`}
                         <div className='rec-row'>
                             <span className='rec-row-label'>Machine Test</span>
                             {activeRecordingDisplay === 'machineTest' ? (
-                                <button className='rec-btn-stop' onClick={endMachineTest} disabled={recStatus === 'requesting-mic'}>⏹ Stop</button>
+                                <button className='rec-btn-stop' onClick={endMachineTest}>⏹ Stop</button>
                             ) : (
                                 <button className='rec-btn-start' onClick={beginMachineTest} disabled={activeRecordingDisplay !== null}>▶ Start</button>
                             )}
+                            <span className='rec-status-badge'>{machineTestStatus}</span>
                         </div>
 
                         <div className='rec-row'>
                             <span className='rec-row-label'>Description</span>
                             {activeRecordingDisplay === 'description' ? (
-                                <button className='rec-btn-stop' onClick={endDescription} disabled={recStatus === 'requesting-mic'}>⏹ Stop</button>
+                                <button className='rec-btn-stop' onClick={endDescription}>⏹ Stop</button>
                             ) : (
                                 <button className='rec-btn-start' onClick={beginDescription} disabled={activeRecordingDisplay !== null}>▶ Start</button>
                             )}
+                            <span className='rec-status-badge'>{descriptionStatus}</span>
                         </div>
 
                         <div className='rec-status-list'>
