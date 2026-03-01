@@ -1,0 +1,27 @@
+"Task: Extract structured information from the provided audio transcript. 
+Identify every "Part Name" mentioned and provide the corresponding "Part Details" (such as dimensions, material, condition, or associated SKU).
+
+Guidelines:
+1. List each part clearly.
+2. If details are not explicitly mentioned for a part, label it as "Not specified".
+3. Use a structured JSON format for the output.
+
+Example 1:
+Transcript: "We checked the intake valve and noticed some carbon buildup. The gasket, which is the 4-inch rubber model, looks brand new."
+Reasoning: 
+- The speaker mentions "intake valve". The detail provided is "carbon buildup".
+- The speaker mentions "gasket". The details provided are "4-inch", "rubber", and "looks brand new".
+Output:
+[
+  {"part_name": "intake valve", "part_details": "carbon buildup"},
+  {"part_name": "gasket", "part_details": "4-inch, rubber, brand new"}
+]
+
+Example 2:
+Transcript: [Insert another relevant example here]
+...
+
+Current Transcript for Extraction:
+"{{INSERT_TRANSCRIPT_HERE}}"
+
+Let's think step by step:"
