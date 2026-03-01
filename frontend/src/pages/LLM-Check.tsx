@@ -52,12 +52,16 @@ export default function LLMCheck() {
                 }
 
                 setStage('generating');
-                // Strip imageDataUrl before sending to report backend (too large)
+                // Strip full data URL — send only the base64 portion to keep payload small
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { imageDataUrl: _imgDataUrl, ...payloadWithoutImage } = payload as Record<string, any>;
+                const image_data_b64 = payload.imageDataUrl
+                    ? (payload.imageDataUrl as string).split(',')[1] ?? ''
+                    : '';
                 const reportPayload = {
                     ...payloadWithoutImage,
                     ...(imageAnomalyResult ? { image_anomaly: imageAnomalyResult } : {}),
+                    ...(image_data_b64 ? { image_data_b64 } : {}),
                 };
 
                 const res = await fetch(REPORT_API, {

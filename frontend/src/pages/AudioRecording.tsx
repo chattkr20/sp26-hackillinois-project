@@ -313,12 +313,12 @@ export default function AudioRecording() {
 
                         <p className='rec-section-label'>Visual Inspection Photo</p>
 
-                        {/* Hidden file input — opens camera on mobile, file picker on desktop */}
+                        {/* Hidden file input — no capture attr so browser shows full choice:
+                             mobile: "Take Photo" + "Choose from Library"; desktop: file picker */}
                         <input
                             ref={imageInputRef}
                             type='file'
                             accept='image/*'
-                            capture='environment'
                             style={{ display: 'none' }}
                             onChange={handleImageCapture}
                         />

@@ -5,6 +5,7 @@ Model: Phi-3.5-mini-instruct on A10G GPU.
 """
 
 import base64
+import io
 import json
 from datetime import datetime
 
@@ -102,6 +103,7 @@ class ReportGenerator:
         anomaly_status = anomaly.get("status", "unknown")
         machine_type = sanitize(anomaly.get("machine_type") or "Unknown")
         anomaly_subtype = sanitize(anomaly.get("anomaly_subtype") or "None detected")
+        image_data_b64 = payload.get("image_data_b64", "")
         img_status = image_anomaly.get("status", "")
         img_score = image_anomaly.get("anomaly_score", None)
         img_confidence = image_anomaly.get("confidence", None)
@@ -220,6 +222,16 @@ class ReportGenerator:
                 pdf.kv_row("Confidence", f"{img_confidence * 100:.1f}%")
             pdf.kv_row("Mode", img_mode)
             pdf.ln(6)
+
+        if image_data_b64:
+            import base64 as _b64
+            try:
+                img_bytes = _b64.b64decode(image_data_b64)
+                pdf.section_title("Inspection Photo")
+                pdf.image(io.BytesIO(img_bytes), w=170)
+                pdf.ln(4)
+            except Exception as e:
+                print(f"[report] Could not embed image: {e}")
 
         if summary:
             pdf.section_title("AI Inspection Summary")
