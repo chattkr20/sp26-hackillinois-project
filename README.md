@@ -4,11 +4,136 @@
 
 ## HackIllinois Info
 
-**Project Track:** Caterpillar
+| Field | Value |
+|---|---|
+| **Track** | Caterpillar |
+| **HackIllinois Prizes** | Most Creative, Best UI/UX Design |
+| **Company Prizes** | Best Use of OpenAI API |
 
-**HackIllinois Prizes:** Most Creative, Best UI UX Design
+---
 
-**Company Prizes:** Best Use of OpenAI API
+## AI Disclaimer
+
+> **This tool is designed to assist trained CAT equipment inspectors — not replace them.**
+>
+> All AI-generated assessments (acoustic anomaly detection, image analysis, and report generation) are probabilistic in nature and may produce false positives or false negatives. **Do not make safety-critical maintenance or operational decisions solely based on the output of this tool.** Always have findings reviewed by a qualified technician before taking action.
+>
+> Models used in this project were fine-tuned on limited training data and are intended for demonstration purposes at HackIllinois 2026.
+
+---
+
+## What It Does
+
+Catty Micro-Pillar lets a CAT machine operator conduct a hands-free equipment inspection and generate a structured status report. The operator walks through each part of the machine, recording:
+
+1. **Machine sound** — native audio of the part running (analyzed for acoustic anomalies)
+2. **Description** — the operator speaking about the part (transcribed via Whisper)
+3. **Photo** — a snapshot of the part (analyzed by a fine-tuned vision model)
+
+All three signals are combined by an LLM to produce a per-part status (`PASS` / `MONITOR` / `FAIL`) and a full downloadable PDF report.
+
+---
+
+## Architecture
+
+```
+Browser (React + TypeScript)
+        │
+        ├─► /speech-to-text    (Modal · Whisper-large-v3 · T4)
+        ├─► /audio-anomaly     (Modal · Wav2Vec2-Large fine-tuned · T4)
+        ├─► /image-anomaly     (Modal · EfficientNet-B0 fine-tuned · T4)
+        └─► /generate-report   (Modal · Phi-3.5-mini-instruct · A10G · fpdf2)
+```
+
+---
+
+## Tech Stack
+
+### Frontend
+
+| Technology | Purpose |
+|---|---|
+| React 19 + TypeScript | UI framework |
+| Vite 7 | Build tool / dev server |
+| React Router v7 | Client-side routing |
+| react-speech-recognition | Voice command capture |
+| MediaRecorder API | Native audio recording (WebM) |
+| lucide-react | Icons |
+| Cloudflare Pages | Hosting (auto-deploys on push) |
+
+### Backend (Modal Serverless)
+
+| Technology | Purpose |
+|---|---|
+| Modal | Serverless GPU containers |
+| OpenAI Whisper large-v3 | Speech-to-text transcription |
+| Wav2Vec2-Large (fine-tuned) | Acoustic anomaly detection |
+| EfficientNet-B0 (fine-tuned) | Visual anomaly detection |
+| Microsoft Phi-3.5-mini-instruct | Report generation LLM |
+| fpdf2 | PDF generation |
+| FastAPI / ASGI | API layer inside Modal |
+
+### Training
+
+| Technology | Purpose |
+|---|---|
+| PyTorch | Model training |
+| Hugging Face Transformers | Pre-trained model weights |
+| Modal A100 | Training compute |
+
+---
+
+## Project Structure
+
+```
+hackillinois26/
+├── frontend/
+│   └── src/
+│       └── pages/
+│           ├── LoginPage.tsx        # Operator profile form
+│           ├── AudioRecording.tsx   # Hands-free recording flow
+│           ├── LLM-Check.tsx        # Sends data to AI endpoints
+│           └── ReportDisplay.tsx    # PDF download + report view
+├── backend/
+│   ├── prompt.txt                   # LLM system prompt (baked into Modal image)
+│   └── ai/
+│       ├── speech_to_text.py        # Whisper endpoint
+│       ├── audio_anomaly.py         # Wav2Vec2 acoustic endpoint
+│       ├── image_anomaly.py         # EfficientNet visual endpoint
+│       ├── report_generator.py      # Phi-3.5 + PDF endpoint
+│       ├── train_anomaly.py         # Audio model training (reference)
+│       └── train_image_anomaly.py   # Image model training (reference)
+└── README.md
+```
+
+---
+
+## Running Locally
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Use **Chrome** for best compatibility (MediaRecorder + SpeechRecognition APIs).
+
+### Backend
+
+All backend services run on Modal. Deploy each individually:
+
+```bash
+source venv/bin/activate
+
+modal deploy backend/ai/speech_to_text.py
+modal deploy backend/ai/audio_anomaly.py
+modal deploy backend/ai/image_anomaly.py
+modal deploy backend/ai/report_generator.py
+```
+
+Checkpoints are stored in Modal Volumes (`cat-audio-model`, `cat-image-model`) and loaded lazily on first request.
 
 
 ## Project Info
