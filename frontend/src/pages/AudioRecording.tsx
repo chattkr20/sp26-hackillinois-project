@@ -240,6 +240,11 @@ export default function AudioRecording() {
         partName: 'LISTENING — Part Name',
     };
 
+    const signOut = () => {
+        localStorage.removeItem('catInspectOperator');
+        navigate('/login');
+    };
+
     return (
         <div className='rec-root'>
             <div className='login-bg-grid' />
@@ -250,6 +255,7 @@ export default function AudioRecording() {
                     <span className='title-inspect'>INSPECT</span>
                 </div>
                 <span className='rec-step-label'>▸ STEP 2 · CAPTURE AUDIO</span>
+                <button className='rec-signout-btn' onClick={signOut}>Sign Out</button>
             </header>
 
             <main className='rec-main'>

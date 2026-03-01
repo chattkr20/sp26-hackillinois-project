@@ -243,6 +243,15 @@
   letter-spacing: 0.1em;
 }
 
+/* Continue-as shortcut button (pre-filled from cache) */
+.login-btn-continue {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid var(--yellow);
+  color: var(--yellow);
+  margin-bottom: 20px;
+}
+
 /*Adjustable based on window size - MM */
 @media (max-width: 480px) {
   .login-header { padding: 0 20px; }

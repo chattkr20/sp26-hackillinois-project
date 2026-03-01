@@ -281,6 +281,24 @@
   text-transform: uppercase;
 }
 
+.rec-signout-btn {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.rec-signout-btn:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
 @media (max-width: 480px) {
   .rec-card-body   { padding: 16px; }
   .rec-card-header { padding: 16px 16px 12px; }

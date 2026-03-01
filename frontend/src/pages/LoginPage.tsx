@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [id, setId] = useState('');
+
+  // Pre-fill from cache if returning user
+  const cached = (() => {
+    try { return JSON.parse(localStorage.getItem('catInspectOperator') || 'null'); } catch { return null; }
+  })();
+
+  const [name, setName] = useState(cached?.name ?? '');
+  const [id, setId] = useState(cached?.id ?? '');
   const [errors, setErrors] = useState<{ name?: string; id?: string }>({});
 
   const validate = () => {
@@ -53,6 +59,15 @@ export default function LoginPage() {
             <p className="login-card-sub">Enter your credentials to start a new session.</p>
 
             <form onSubmit={handleSubmit} className="login-form" noValidate>
+              {cached && (
+                <button
+                  type="button"
+                  className="login-btn login-btn-continue"
+                  onClick={() => navigate('/recording')}
+                >
+                  CONTINUE AS {cached.name.toUpperCase()} <span className="login-btn-arrow">⟶</span>
+                </button>
+              )}
               <div className={`login-field ${errors.name ? 'has-error' : ''}`}>
                 <label htmlFor="name">INSPECTOR NAME</label>
                 <input
