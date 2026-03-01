@@ -75,16 +75,29 @@ class ReportGenerator:
     def generate_report(self, payload: dict) -> dict:
         from fpdf import FPDF
 
+        def sanitize(text: str) -> str:
+            """Strip characters not supported by fpdf2 Helvetica (latin-1)."""
+            return (
+                str(text)
+                .replace("\u2014", "-")   # em dash
+                .replace("\u2013", "-")   # en dash
+                .replace("\u2018", "'")   # left single quote
+                .replace("\u2019", "'")   # right single quote
+                .replace("\u201c", '"')   # left double quote
+                .replace("\u201d", '"')   # right double quote
+                .encode("latin-1", errors="replace").decode("latin-1")
+            )
+
         anomaly = payload.get("anomaly", {})
         stt = payload.get("stt", {})
-        part_name = payload.get("part_name") or "Not specified"
-        operator_name = payload.get("operator_name") or "Unknown"
-        operator_id = payload.get("operator_id") or "—"
-        transcript = stt.get("transcript", "")
+        part_name = sanitize(payload.get("part_name") or "Not specified")
+        operator_name = sanitize(payload.get("operator_name") or "Unknown")
+        operator_id = sanitize(payload.get("operator_id") or "N/A")
+        transcript = sanitize(stt.get("transcript", ""))
         anomaly_score = anomaly.get("anomaly_score", 0.0)
         anomaly_status = anomaly.get("status", "unknown")
-        machine_type = anomaly.get("machine_type") or "Unknown"
-        anomaly_subtype = anomaly.get("anomaly_subtype") or "None detected"
+        machine_type = sanitize(anomaly.get("machine_type") or "Unknown")
+        anomaly_subtype = sanitize(anomaly.get("anomaly_subtype") or "None detected")
 
         # ── 1. Build prompt ──────────────────────────────────────────────────
         prompt = (
@@ -114,8 +127,15 @@ class ReportGenerator:
         except Exception:
             llm_data = {"summary": raw, "parts": []}
 
-        summary = llm_data.get("summary", "")
-        parts = llm_data.get("parts", [])
+        summary = sanitize(llm_data.get("summary", ""))
+        parts = [
+            {
+                "part_name": sanitize(p.get("part_name", "")),
+                "part_details": sanitize(p.get("part_details", "")),
+                "status": sanitize(p.get("status", "PASS")),
+            }
+            for p in llm_data.get("parts", [])
+        ]
 
         if not parts and part_name != "Not specified":
             status = "FAIL" if anomaly_status == "anomaly" else "PASS"
