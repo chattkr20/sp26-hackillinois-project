@@ -17,3 +17,7 @@ tqdm
 
 # --- Legacy CNN14 anomaly endpoint (superseded by ai/audio_anomaly.py) ---
 torchlibrosa
+
+# --- LLM / Gemini ---
+google-generativeai
+requests
