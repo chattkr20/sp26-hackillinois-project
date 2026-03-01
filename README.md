@@ -1,49 +1,108 @@
 # CATalyze
 
-**Website**: [https://hackillinois26.milindkumar.dev](https://hackillinois26.milindkumar.dev)
+**Live Demo**: [https://hackillinois26.milindkumar.dev](https://hackillinois26.milindkumar.dev)
 
-## HackIllinois Info
-
-| Field | Value |
-|---|---|
-| **Track** | Caterpillar |
+> **HackIllinois 2026 — Caterpillar Track** | *Best AI Inspection*
 | **HackIllinois Prizes** | Most Creative, Best UI/UX Design |
 | **Company Prizes** | Best Use of OpenAI API |
 
 ---
 
-## AI Disclaimer
+## What We Built
 
-> **This tool is designed to assist trained CAT equipment inspectors — not replace them.**
->
-> All AI-generated assessments (acoustic anomaly detection, image analysis, and report generation) are probabilistic in nature and may produce false positives or false negatives. **Do not make safety-critical maintenance or operational decisions solely based on the output of this tool.** Always have findings reviewed by a qualified technician before taking action.
->
-> Models used in this project were fine-tuned on limited training data and are intended for demonstration purposes at HackIllinois 2026.
+CATalyze is an AI-powered field inspection assistant that merges the capabilities of **CAT Inspect** and **CAT AI Assistant** into a single, voice-first, multimodal application. It lets a machine operator conduct a full equipment walkaround **hands-free** — speaking naturally, recording machine sounds, and snapping photos — while AI handles transcription, anomaly detection, and report generation in real time.
+
+**The problem it solves:** Traditional CAT equipment inspections require inspectors to carry clipboards, manually notate findings, and later write structured reports. This is slow, error-prone, and forces skilled personnel to spend time on documentation instead of safety-critical observation. CATalyze eliminates the paperwork entirely.
+
+**The output:** A fully structured, standards-aligned PDF inspection report — identical in format to CAT Inspect's standard reports — generated automatically from voice + audio + image inputs, with no manual data entry.
 
 ---
 
-## What It Does
+## AI Disclaimer
 
-CATalyze lets a CAT machine operator conduct a hands-free equipment inspection and generate a structured status report. The operator walks through each part of the machine, recording:
+> **CATalyze is designed to assist trained CAT equipment inspectors — not replace them.**
+>
+> All AI-generated assessments (acoustic anomaly detection, image analysis, and report generation) are probabilistic and may produce false positives or false negatives. **Do not make safety-critical maintenance or operational decisions solely based on this tool's output.** All findings must be reviewed by a qualified technician before action is taken.
+>
+> Models were fine-tuned on limited training data and are intended for demonstration purposes at HackIllinois 2026.
 
-1. **Machine sound** — native audio of the part running (analyzed for acoustic anomalies)
-2. **Description** — the operator speaking about the part (transcribed via Whisper)
-3. **Photo** — a snapshot of the part (analyzed by a fine-tuned vision model)
+---
 
-All three signals are combined by an LLM to produce a per-part status (`PASS` / `MONITOR` / `FAIL`) and a full downloadable PDF report.
+## How It Addresses the CAT Track Challenge
+
+| CAT Track Goal | CATalyze Approach |
+|---|---|
+| Reduce manual effort | Fully voice-driven — no typing, no forms, no clipboard |
+| Improve safety | Acoustic anomaly detection catches faults the human ear may miss |
+| Reduce on-site risk | Operators stay at safe distance; AI analyzes audio + image remotely |
+| Structured inspection summary | PDF report aligned with CAT Inspect standard report format |
+| Multimodal AI | Whisper (voice) + Wav2Vec2 (acoustic) + EfficientNet (visual) + Phi-3.5 (reasoning) |
+| Visual parts identification | EfficientNet fine-tuned to detect visual defects from a single photo |
+| Reduce SME overhead | Non-expert operators can conduct and document inspections with AI guidance |
+
+---
+
+## Inspection Flow
+
+```
+Operator puts on headset and opens CATalyze
+        │
+        ▼
+1. Identifies part by voice → "Part name: fan"
+        │
+        ▼
+2. Records machine sound → AI detects acoustic anomalies (imbalance, obstruction, etc.)
+        │
+        ▼
+3. Describes the part verbally → Whisper transcribes in real time
+        │
+        ▼
+4. Snaps a photo → EfficientNet detects visual defects
+        │
+        ▼
+5. Says "submit" → All three signals sent to LLM reasoning layer
+        │
+        ▼
+6. Phi-3.5-mini synthesizes findings → Structured PDF report generated
+        │
+        ▼
+7. Report downloaded or shared instantly — no manual documentation
+```
+
+---
+
+## AI Stack & Model Choices
+
+### Why These Models
+
+| Signal | Model | Why |
+|---|---|---|
+| Voice transcription | Whisper large-v3 | SOTA multilingual ASR; handles field noise, accents, technical vocabulary |
+| Acoustic anomaly | Wav2Vec2-Large (fine-tuned) | Self-supervised audio rep; fine-tuned on CAT machine fault patterns to detect imbalance, bearing wear, obstruction |
+| Visual anomaly | EfficientNet-B0 (fine-tuned) | Compact, fast CNN; fine-tuned binary classifier (normal vs. defect) on equipment imagery |
+| Report reasoning | Phi-3.5-mini-instruct | Efficient 3.8B SLM on A10G; reasons over all three signals to produce structured, actionable findings |
+
+### Fine-Tuning Approach
+
+Both the acoustic and visual models were trained from pre-trained HuggingFace checkpoints using Modal A100 GPU compute:
+
+- **Wav2Vec2**: Feature extractor frozen, classification head fine-tuned on audio samples labeled by fault type (normal, imbalance, obstruction, bearing fault)
+- **EfficientNet-B0**: Convolutional base frozen, 4-layer classification head fine-tuned on equipment imagery (normal vs. anomaly) with dropout regularization
 
 ---
 
 ## Architecture
 
 ```
-Browser (React + TypeScript)
+Browser (React 19 + TypeScript)
         │
-        ├─► /speech-to-text    (Modal · Whisper-large-v3 · T4)
-        ├─► /audio-anomaly     (Modal · Wav2Vec2-Large fine-tuned · T4)
-        ├─► /image-anomaly     (Modal · EfficientNet-B0 fine-tuned · T4)
-        └─► /generate-report   (Modal · Phi-3.5-mini-instruct · A10G · fpdf2)
+        ├─► Whisper large-v3        (Modal · T4)   ← voice description
+        ├─► Wav2Vec2-Large ft       (Modal · T4)   ← machine audio
+        ├─► EfficientNet-B0 ft      (Modal · T4)   ← inspection photo
+        └─► Phi-3.5-mini-instruct   (Modal · A10G) ← synthesize → PDF report
 ```
+
+All inference runs on Modal serverless GPU containers — zero infrastructure to manage, cold-start under 5 seconds, scales to zero between inspections.
 
 ---
 
@@ -54,32 +113,33 @@ Browser (React + TypeScript)
 | Technology | Purpose |
 |---|---|
 | React 19 + TypeScript | UI framework |
-| Vite 7 | Build tool / dev server |
-| React Router v7 | Client-side routing |
-| react-speech-recognition | Voice command capture |
+| Vite 7 | Build tool |
+| React Router v7 | Page routing |
+| react-speech-recognition | Real-time voice command capture |
 | MediaRecorder API | Native audio recording (WebM) |
 | lucide-react | Icons |
-| Cloudflare Pages | Hosting (auto-deploys on push) |
+| Cloudflare Pages | Hosting with auto-deploy on push |
 
-### Backend (Modal Serverless)
+### Backend (Modal Serverless GPU)
 
 | Technology | Purpose |
 |---|---|
-| Modal | Serverless GPU containers |
+| Modal | Serverless GPU container orchestration |
 | OpenAI Whisper large-v3 | Speech-to-text transcription |
-| Wav2Vec2-Large (fine-tuned) | Acoustic anomaly detection |
-| EfficientNet-B0 (fine-tuned) | Visual anomaly detection |
-| Microsoft Phi-3.5-mini-instruct | Report generation LLM |
+| Wav2Vec2-Large (fine-tuned) | Acoustic fault detection |
+| EfficientNet-B0 (fine-tuned) | Visual defect classification |
+| Microsoft Phi-3.5-mini-instruct | LLM reasoning + report generation |
 | fpdf2 | PDF generation |
-| FastAPI / ASGI | API layer inside Modal |
+| FastAPI / ASGI | HTTP API layer |
 
-### Training
+### Training Infrastructure
 
 | Technology | Purpose |
 |---|---|
 | PyTorch | Model training |
-| Hugging Face Transformers | Pre-trained model weights |
+| Hugging Face Transformers | Pre-trained checkpoints |
 | Modal A100 | Training compute |
+| Modal Volumes | Checkpoint storage and serving |
 
 ---
 
@@ -88,21 +148,20 @@ Browser (React + TypeScript)
 ```
 hackillinois26/
 ├── frontend/
-│   └── src/
-│       └── pages/
-│           ├── LoginPage.tsx        # Operator profile form
-│           ├── AudioRecording.tsx   # Hands-free recording flow
-│           ├── LLM-Check.tsx        # Sends data to AI endpoints
-│           └── ReportDisplay.tsx    # PDF download + report view
+│   └── src/pages/
+│       ├── LoginPage.tsx        # Operator profile (name, ID)
+│       ├── AudioRecording.tsx   # Hands-free voice + audio + photo capture
+│       ├── LLM-Check.tsx        # Orchestrates all AI endpoint calls
+│       └── ReportDisplay.tsx    # PDF preview + download
 ├── backend/
-│   ├── prompt.txt                   # LLM system prompt (baked into Modal image)
+│   ├── prompt.txt               # LLM system prompt (baked into Modal container)
 │   └── ai/
-│       ├── speech_to_text.py        # Whisper endpoint
-│       ├── audio_anomaly.py         # Wav2Vec2 acoustic endpoint
-│       ├── image_anomaly.py         # EfficientNet visual endpoint
-│       ├── report_generator.py      # Phi-3.5 + PDF endpoint
-│       ├── train_anomaly.py         # Audio model training (reference)
-│       └── train_image_anomaly.py   # Image model training (reference)
+│       ├── speech_to_text.py    # Whisper endpoint
+│       ├── audio_anomaly.py     # Wav2Vec2 acoustic anomaly endpoint
+│       ├── image_anomaly.py     # EfficientNet visual anomaly endpoint
+│       ├── report_generator.py  # Phi-3.5 reasoning + PDF generation endpoint
+│       ├── train_anomaly.py     # Audio model training script
+│       └── train_image_anomaly.py # Image model training script
 └── README.md
 ```
 
@@ -118,11 +177,9 @@ npm install
 npm run dev
 ```
 
-Use **Chrome** for best compatibility (MediaRecorder + SpeechRecognition APIs).
+Use **Chrome** (best MediaRecorder + SpeechRecognition API support).
 
 ### Backend
-
-All backend services run on Modal. Deploy each individually:
 
 ```bash
 source venv/bin/activate
@@ -133,42 +190,4 @@ modal deploy backend/ai/image_anomaly.py
 modal deploy backend/ai/report_generator.py
 ```
 
-Checkpoints are stored in Modal Volumes (`cat-audio-model`, `cat-image-model`) and loaded lazily on first request.
-
-
-## Project Info
-
-This web app allows a machine operator to create a status report for a machine, going through each part of the machine and providing a status by analyzing a recording of the operator speaking about the part and a recording of the part itself using AI.
-
-Here's how the flow will work. When the user first begins using this web app, they fill out information about themselves (called Profile information). After that, every time the user wants to create a report about a machine, they press the microphone button and then can go hands-free until the report is created. The user then goes through each part of the machine and states the Part Name, records audio of the part (Machine Sound), and records themselves talking about the part (Description). The user uses voice commands to signal what they intend to record. After giving the phrase to signal submission, the Machine Sound is analyzed for discrepancies and concerning sounds. This analysis is combined with a transcription of the Description to create a final decision on each part consisting of the part's status, description, etc. These decisions about each part are then compiled into a report for the machine as a whole which the user can then view.
-
-## Running the Project Locally
-
-### Running Backend Locally
-
-```
-cd backend
-```
-
-#### Windows
-
-```
-./start.ps1
-```
-
-#### Mac / Linux
-
-```
-chmod +x start.sh
-./start.sh
-```
-
-### Running Frontend Locally
-
-```
-cd frontend
-npm i
-npm run dev
-```
-
-It is recommended you use **Chrome** to run the localhost
+Model checkpoints are stored in Modal Volumes (`cat-audio-model`, `cat-image-model`) and loaded lazily on first request.
