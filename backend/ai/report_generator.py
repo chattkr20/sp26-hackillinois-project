@@ -33,22 +33,20 @@ image = (
         "huggingface_hub",
     )
     .run_function(_download_model)
+    .add_local_file("backend/prompt.txt", "/root/prompt.txt")
 )
 
-PROMPT_TEMPLATE = """You are a CAT equipment inspection AI. Extract structured information from the transcript and anomaly reports below.
 
-Transcript: "{{TRANSCRIPT}}"
-
-Acoustic Anomaly Report:
-{{ANOMALY_JSON}}
-
-Visual (Image) Anomaly Report:
-{{IMAGE_ANOMALY_JSON}}
-
-Return ONLY a JSON object with exactly two keys:
-1. "summary" (string): 2-3 sentence plain English inspection summary that considers BOTH acoustic and visual findings.
-2. "parts" (array): [{"part_name": str, "part_details": str, "status": "PASS"|"MONITOR"|"FAIL"}]
-If the visual report shows an anomaly, that should influence the status. If no parts are mentioned, infer from context. No markdown fences, no extra text."""
+def _build_prompt(transcript: str, anomaly_json: str, image_anomaly_json: str) -> str:
+    """Load prompt.txt from the baked-in file and fill in the three placeholders."""
+    with open("/root/prompt.txt", "r") as f:
+        template = f.read()
+    return (
+        template
+        .replace("{{INSERT_TRANSCRIPT_HERE}}", transcript)
+        .replace("{{INSERT_ANOMALOUS_REPORT_HERE}}", anomaly_json)
+        .replace("{{INSERT_IMAGE_ANOMALY_REPORT_HERE}}", image_anomaly_json)
+    )
 
 
 @app.cls(
@@ -109,12 +107,11 @@ class ReportGenerator:
         img_confidence = image_anomaly.get("confidence", None)
         img_mode = sanitize(image_anomaly.get("mode") or "N/A")
 
-        # ── 1. Build prompt ──────────────────────────────────────────────────
-        prompt = (
-            PROMPT_TEMPLATE
-            .replace("{{TRANSCRIPT}}", transcript)
-            .replace("{{ANOMALY_JSON}}", json.dumps(anomaly, indent=2))
-            .replace("{{IMAGE_ANOMALY_JSON}}", json.dumps(image_anomaly, indent=2) if image_anomaly else "Not available")
+        # ── 1. Build prompt from prompt.txt ──────────────────────────────────
+        prompt = _build_prompt(
+            transcript=transcript,
+            anomaly_json=json.dumps(anomaly, indent=2),
+            image_anomaly_json=json.dumps(image_anomaly, indent=2) if image_anomaly else "Not available",
         )
         messages = [{"role": "user", "content": prompt}]
 
