@@ -248,8 +248,19 @@ class ReportGenerator:
             import base64 as _b64
             try:
                 img_bytes = _b64.b64decode(image_data_b64)
+                # Detect format from magic bytes so fpdf2 knows the type
+                if img_bytes[:2] == b'\xff\xd8':
+                    ext = 'jpg'
+                elif img_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                    ext = 'png'
+                elif img_bytes[:6] in (b'GIF87a', b'GIF89a'):
+                    ext = 'gif'
+                else:
+                    ext = 'jpg'  # safe default
+                img_buf = io.BytesIO(img_bytes)
+                img_buf.name = f"photo.{ext}"  # fpdf2 uses .name to determine format
                 pdf.section_title("Inspection Photo")
-                pdf.image(io.BytesIO(img_bytes), w=170)
+                pdf.image(img_buf, w=170)
                 pdf.ln(4)
             except Exception as e:
                 print(f"[report] Could not embed image: {e}")
