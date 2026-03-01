@@ -25,7 +25,6 @@ export default function AudioRecording() {
     const [machineTestDone, setMachineTestDone] = useState(false);
     const [descriptionDone, setDescriptionDone] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [results, setResults] = useState<{ anomaly: any; stt: any } | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [micError, setMicError] = useState<string | null>(null);
 
@@ -101,7 +100,6 @@ export default function AudioRecording() {
         }
         setIsSubmitting(true);
         setSubmitError(null);
-        setResults(null);
 
         // Auto-stop mic immediately when submit is triggered
         SpeechRecognition.stopListening();
@@ -124,7 +122,17 @@ export default function AudioRecording() {
             if (anomalyResult.error || sttResult.error) {
                 setSubmitError(`API error — anomaly: ${anomalyResult.error || 'ok'} | stt: ${sttResult.error || 'ok'}`);
             } else {
-                setResults({ anomaly: anomalyResult, stt: sttResult });
+                // Navigate to LLM check / report generation screen
+                const operator = JSON.parse(localStorage.getItem('catInspectOperator') || '{}');
+                navigate('/llm-check', {
+                    state: {
+                        anomaly: anomalyResult,
+                        stt: sttResult,
+                        part_name: partName,
+                        operator_name: operator.name,
+                        operator_id: operator.id,
+                    }
+                });
             }
         } catch (err: any) {
             setSubmitError(`Submit failed: ${err.message}`);
@@ -179,7 +187,6 @@ export default function AudioRecording() {
     }, [transcript]);
 
     const [recordingStarted, setRecordingStarted] = useState(false);
-    const [showDevPanel, setShowDevPanel] = useState(false);
 
     useEffect(() => {
         if (!listening && recordingStarted) {
@@ -220,8 +227,6 @@ export default function AudioRecording() {
         description: '🔴 Recording: Description',
         partName: '🔴 Listening: Part Name',
     };
-
-    const anomalyStatus = results?.anomaly?.status;
 
     return (
         <div id='recording-screen'>
@@ -304,51 +309,6 @@ export default function AudioRecording() {
 
                 {submitError && <div className='badge badge-error'>{submitError}</div>}
                 {isSubmitting && <div className='badge badge-submitting'>⏳ Submitting to AI...</div>}
-
-                {results && (
-                    <div id='results-panel'>
-                        <div className={`result-status ${anomalyStatus}`}>
-                            {anomalyStatus === 'anomaly' ? '⚠️ ANOMALY DETECTED' : '✅ NORMAL'}
-                        </div>
-                        <div className='result-row'>
-                            <span>Anomaly Score</span>
-                            <strong>{(results.anomaly.anomaly_score * 100).toFixed(1)}%</strong>
-                        </div>
-                        {results.anomaly.machine_type && (
-                            <div className='result-row'>
-                                <span>Machine Type</span>
-                                <strong>{results.anomaly.machine_type}</strong>
-                            </div>
-                        )}
-                        {results.anomaly.anomaly_subtype && (
-                            <div className='result-row'>
-                                <span>Fault Type</span>
-                                <strong>{results.anomaly.anomaly_subtype}</strong>
-                            </div>
-                        )}
-                        {results.stt?.transcript && (
-                            <div className='result-row transcript-row'>
-                                <span>Transcript</span>
-                                <em>{results.stt.transcript}</em>
-                            </div>
-                        )}
-                        <button className='dev-toggle' onClick={() => setShowDevPanel(v => !v)}>
-                            {showDevPanel ? '▲ Hide raw output' : '▼ Show raw output'}
-                        </button>
-                        {showDevPanel && (
-                            <div id='dev-panel'>
-                                <div className='dev-section'>
-                                    <strong>Anomaly API response:</strong>
-                                    <pre>{JSON.stringify(results.anomaly, null, 2)}</pre>
-                                </div>
-                                <div className='dev-section'>
-                                    <strong>Transcription API response:</strong>
-                                    <pre>{JSON.stringify(results.stt, null, 2)}</pre>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     );
