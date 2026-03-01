@@ -1,124 +1,131 @@
-Task: Extract structured information from the provided audio transcript and use the provided JSON to decide whether to flag the anomalous part based on the score provided and relay that data in the JSON format provided below. 
-Identify every "Part Name" mentioned and provide the corresponding "Part Details".
+Task: You are an expert CAT equipment inspection AI. Analyze the provided transcript, audio anomaly data, and visual anomaly data. Produce a comprehensive, structured inspection report in JSON.
 
 Guidelines:
-1. List each part clearly and it should be chosen from this JSON {"part_names": "Bucket", "Bucket cylinder and linkage", "Stick", "Boom cylinders", "Underneath of the machine", "Carbody", "Undercarriage", "Steps & handholds", "Batteries and hold downs", "Windshield wipers", "Fire extinguisher", "Engine coolant", "Primary/secondary fuel filters", "Air filter", "Hydraulic oil tank", "Radiator", "Hydraulic pilot oil filter", "AC condenser", "Hydraulic oil cooler", "Lights", "Mirrors", "Hydraulic oil filters", "Overall machine", "Electric motor", "Inverter", "Battery pack", "Battery management system", "Controller electronics", "Charger", "Pressure Relief Valve", "Seat", "Seat belt and mounting", "Horn", "Travel alarm", "Indicators", "Monitor panel", "Switches", "Heating system", "Cab interior", "Fan"}.
-2. If details are not explicitly mentioned for a part, use null as a replacement.
-3. Use a structured JSON format for the output.
-4. If anomalous activity is detected= "anomaly_score": 1, then append "Possible Anomalous activity detected: Shows anomaly_subtype." to the part_details at the end, and append a suggestion to the part_details after the “Possible Anomalous activity” section which is “Suggestion for Part Improvement: “ followed a way to fix the part or fix the problem the part is facing.
+1. Identify every part mentioned. Part names must be chosen from: "Bucket", "Bucket cylinder and linkage", "Stick", "Boom cylinders", "Underneath of the machine", "Carbody", "Undercarriage", "Steps & handholds", "Batteries and hold downs", "Windshield wipers", "Fire extinguisher", "Engine coolant", "Primary/secondary fuel filters", "Air filter", "Hydraulic oil tank", "Radiator", "Hydraulic pilot oil filter", "AC condenser", "Hydraulic oil cooler", "Lights", "Mirrors", "Hydraulic oil filters", "Overall machine", "Electric motor", "Inverter", "Battery pack", "Battery management system", "Controller electronics", "Charger", "Pressure Relief Valve", "Seat", "Seat belt and mounting", "Horn", "Travel alarm", "Indicators", "Monitor panel", "Switches", "Heating system", "Cab interior", "Fan".
+2. If details for a part are not explicitly mentioned, use null for part_details.
+3. For each part, if audio anomaly_score >= 1 OR visual status == "anomaly", append "Possible Anomalous activity detected: Shows <anomaly_subtype>. Suggestion for Part Improvement: <specific corrective action>." to part_details.
+4. Set overall_risk_rating to "HIGH" if any part has audio anomaly_score >= 1 or visual status == "anomaly"; "MEDIUM" if any part has audio anomaly_score >= 0.3 or visual anomaly_score >= 0.5; otherwise "LOW".
+5. Write executive_summary as 2-3 sentences summarizing the overall machine condition and the most critical finding. Be specific about what was found and why it matters for safety or operations.
+6. List up to 3 immediate_actions: specific, actionable steps ordered by urgency. Each action must name the part and describe the exact step to take.
+7. For each part set recommended_action to a concise directive (one sentence), and set urgency to: "IMMEDIATE" (safety risk or anomaly confirmed by multiple signals), "SCHEDULED" (next maintenance window), or "MONITOR" (watch at next inspection). Trust the anomaly signals over the operator's verbal report when they conflict.
+8. Output valid JSON only - no extra text, no markdown fences.
+
+Output schema:
+{
+  "overall_risk_rating": "HIGH" | "MEDIUM" | "LOW",
+  "executive_summary": "string",
+  "immediate_actions": ["string", "string", "string"],
+  "parts": [
+    {
+      "part_name": "string",
+      "part_details": "string or null",
+      "recommended_action": "string",
+      "urgency": "IMMEDIATE" | "SCHEDULED" | "MONITOR"
+    }
+  ]
+}
 
 Example 1:
-{
 
 Visual Anomaly:
+{"anomaly_score": 0.4095, "status": "normal", "confidence": 0.5905, "mode": "finetuned", "label": "No visible defect"}
 
-{'anomaly_score': 0.4095, 'status': 'normal', 'confidence': 0.5905, 'mode': 'finetuned', 'label': 'No visible defect'}
-
-  Audio Anomaly:
-
-{
-  "status": "anomaly",
-  "anomaly_score": 0,
-  "threshold": 0.3,
-  "machine_type": "fan",
-  "anomaly_subtype": "imbalance",
-  "confidence": .1
-}
+Audio Anomaly:
+{"status": "normal", "anomaly_score": 0.0, "threshold": 0.3, "machine_type": "battery", "anomaly_subtype": "none", "confidence": 0.1}
 
 Transcription:
+{"transcript": "A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage.", "language": "en", "duration_seconds": 18.52}
 
-{ 
-“transcript”: “A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage.”
-“language”: “en”,
-“duration_seconds”: 18.52,
-“inspection_notes”: []
-} 
-
-}
-Reasoning: 
-The transcript mentions "battery pack". The details are a full description of the leak and surrounding corrosion. The audio anomaly_score is 0 and the visual anomaly_score is 0.4095 which are both low, so Guideline 4 (appending the anomaly flag) is not applied.
+Reasoning:
+Transcript mentions "Battery pack" with a detailed leak description. Audio anomaly_score is 0.0 and visual status is "normal" - no anomaly flag appended. The operator's description of a leak is a maintenance concern, so urgency is SCHEDULED. overall_risk_rating is MEDIUM because an active fluid leak poses a chemical exposure risk.
 
 Output:
-[ 
-  {
-    "part_name": "Battery pack",
-    "part_details": "A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage. Suggestion for Part Improvement: replace the current battery pack with a new battery pack that does not show signs of leaks in the valve or other faults."
-  }
-]
+{
+  "overall_risk_rating": "MEDIUM",
+  "executive_summary": "The battery pack shows a confirmed fluid leak at the vent valve, with visible corrosion and discoloration around the seal. While acoustic and visual sensor thresholds were not breached, the physical leak presents a chemical exposure risk and potential for accelerated degradation. Containment and seal replacement are recommended before next operational use.",
+  "immediate_actions": [
+    "Isolate the battery pack and prevent further machine operation until the vent valve is inspected by a qualified technician.",
+    "Clean and neutralize any battery fluid residue in the affected area to prevent corrosion spread.",
+    "Schedule vent valve and battery seal replacement at the earliest available maintenance window."
+  ],
+  "parts": [
+    {
+      "part_name": "Battery pack",
+      "part_details": "A leak was detected in the battery pack. The leak appears to be coming from the vent valve located on the top section of the battery casing. There are visible signs of battery fluid residue around the vent, and the surrounding area shows slight corrosion and discoloration indicative of chemical leakage.",
+      "recommended_action": "Replace vent valve seal and inspect battery casing for structural damage; do not operate until cleared by a technician.",
+      "urgency": "SCHEDULED"
+    }
+  ]
+}
 
 Example 2:
-{
-  Anomaly:
 
-{
-  "status": "anomaly",
-  "anomaly_score": 1,
-  "threshold": 0.3,
-  "machine_type": "fan",
-  "anomaly_subtype": "obstruction",
-  "confidence": .92
-}
+Visual Anomaly:
+{"anomaly_score": 0.7305, "status": "anomaly", "confidence": 0.7305, "mode": "finetuned", "label": "Potential defect detected (visual)"}
+
+Audio Anomaly:
+{"status": "anomaly", "anomaly_score": 1.0, "threshold": 0.3, "machine_type": "fan", "anomaly_subtype": "obstruction", "confidence": 0.92}
 
 Transcription:
+{"transcript": "There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. Additionally, the operation sound seems off, particularly when the fan is running at higher speeds. There is suspicion that something may be obstructing the fan or that there could be a mechanical issue.", "language": "en", "duration_seconds": 14.38}
 
-{ 
-“transcript”: “There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. Additionally, the operation sound seems off, particularly when the fan is running at higher speeds. There is suspicion that something may be obstructing the fan or that there could be a mechanical issue.”
-“language”: “en”,
-“duration_seconds”: 14.38,
-“inspection_notes”: []
-}
+Reasoning:
+Transcript mentions "Fan". Audio anomaly_score is 1.0 (>= 1) AND visual status is "anomaly" - both thresholds breached, so the anomaly flag is appended to part_details. overall_risk_rating is HIGH. urgency is IMMEDIATE because an obstructed fan threatens engine cooling and is a confirmed multi-signal safety risk.
 
-}
-Reasoning: 
-The transcript mentions the "cabin fan" (part name "Fan"). The details describe reduced airflow and a suspicion of obstruction. The anomaly_score is 1 and the anomaly_subtype is "obstruction", the visual anomaly_score is high at 0.7305, so Guideline 4 is applied to append the anomaly flag to the part details.
 Output:
-[ 
-  {
-    "part_name": "Fan",
-    "part_details": "There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. Additionally, the operation sound seems off, particularly when the fan is running at higher speeds. There is suspicion that something may be obstructing the fan or that there could be a mechanical issue. Possible Anomalous activity detected: Shows obstruction. Suggestion for Part Improvement: analyze the fan for signs of obstruction such as imperfections in fan blades or blockages in the air supply to the fan; remove any obstructions."
-  }
-]
+{
+  "overall_risk_rating": "HIGH",
+  "executive_summary": "A confirmed fan obstruction was detected by both acoustic sensors (anomaly score 100%, subtype: obstruction) and visual inspection (anomaly score 73%). Reduced cabin airflow and abnormal sounds at high speed confirm a mechanical fault that poses a risk to operator comfort and engine cooling. Immediate shutdown and fan inspection are required before resuming operation.",
+  "immediate_actions": [
+    "Shut down the machine immediately and do not resume operation until the fan obstruction is cleared.",
+    "Physically inspect fan blades and intake housing for debris, blade deformation, or foreign objects.",
+    "After clearing the obstruction, run the fan at low speed and verify acoustic signature and airflow return to normal before returning to service."
+  ],
+  "parts": [
+    {
+      "part_name": "Fan",
+      "part_details": "There is reduced airflow from the cabin fan, with the cabin not cooling as efficiently. The operation sound is abnormal, particularly at higher speeds. Suspicion of mechanical obstruction confirmed by sensor data. Possible Anomalous activity detected: Shows obstruction. Suggestion for Part Improvement: inspect fan blades and air intake for debris or blockages; remove any obstructions and verify normal airflow and acoustic signature before resuming operation.",
+      "recommended_action": "Halt operation, clear the obstruction from the fan assembly, and verify normal acoustic signature and airflow before returning to service.",
+      "urgency": "IMMEDIATE"
+    }
+  ]
+}
 
 Example 3:
-{
- Visual Anomaly:
 
-{'anomaly_score': 0.9035, 'status': 'anomaly', 'confidence': 0.5905, 'mode': 'finetuned', 'label': 'Potential defect detected (visual)’'}
+Visual Anomaly:
+{"anomaly_score": 0.9035, "status": "anomaly", "confidence": 0.5905, "mode": "finetuned", "label": "Potential defect detected (visual)"}
 
-  Audio Anomaly:
-
-{
-  "status": "anomaly",
-  "anomaly_score": 1,
-  "threshold": 0.3,
-  "machine_type": "fan",
-  "anomaly_subtype": "imbalance",
-  "confidence": 1
-}
+Audio Anomaly:
+{"status": "anomaly", "anomaly_score": 1.0, "threshold": 0.3, "machine_type": "fan", "anomaly_subtype": "imbalance", "confidence": 1.0}
 
 Transcription:
+{"transcript": "The cabin cooling fan is operating smoothly and efficiently. There are no unusual noises, vibrations, or airflow issues. The fan is delivering the expected level of air circulation and cooling within the cabin.", "language": "en", "duration_seconds": 9.61}
 
-{ 
-“transcript”: “The cabin cooling fan is operating smoothly and efficiently. There are no unusual noises, vibrations, or airflow issues. The fan is delivering the expected level of air circulation and cooling within the cabin.”
-“language”: “en”,
-“duration_seconds”: 9.61,
-“Inspection_notes”: []
-}
-
-}
-Reasoning: 
-The transcript mentions the "cabin cooling fan" (part name "Fan"). The details describe the fan operating smoothly. However, the audio anomaly_score is 1 and the anomaly_subtype is "imbalance", the visual anomaly_score is high at 0.9305, so Guideline 4 is applied to append the anomaly flag to the part details.
+Reasoning:
+Transcript mentions "Fan" and operator reports normal operation. However, audio anomaly_score is 1.0 (>= 1) AND visual status is "anomaly" - instrument readings override the operator's verbal assessment per Guideline 7. The anomaly flag is appended to part_details. overall_risk_rating is HIGH. urgency is IMMEDIATE because structural imbalance causes accelerating bearing wear and is a confirmed multi-signal safety hazard.
 
 Output:
-[ 
-  {
-    "part_name": "Fan",
-    "part_details": "The cabin cooling fan is operating smoothly and efficiently. There are no unusual noises, vibrations, or airflow issues. The fan is delivering the expected level of air circulation and cooling within the cabin. Possible Anomalous activity detected: Shows imbalance. Suggestion for Part Improvement: ensure the fan is level and air flow is unconstrained by the angle of the fan."
-  }
-]
+{
+  "overall_risk_rating": "HIGH",
+  "executive_summary": "Sensor data contradicts the operator's verbal report: acoustic analysis detected fan imbalance at maximum confidence (100%) and visual analysis flagged a potential defect (anomaly score 90%). Fan imbalance accelerates bearing wear and can cause catastrophic failure under load - instrument readings take precedence over the verbal assessment. Immediate mechanical inspection is required before next use.",
+  "immediate_actions": [
+    "Do not operate the machine - fan imbalance confirmed by acoustic and visual sensors; vibration from an imbalanced fan can rapidly damage adjacent components.",
+    "Perform a physical balance check on the fan assembly and inspect blades for uneven wear, cracks, or missing material.",
+    "Replace or rebalance the fan if defects are confirmed; re-run acoustic diagnostic post-repair to verify resolution."
+  ],
+  "parts": [
+    {
+      "part_name": "Fan",
+      "part_details": "Operator reports the cabin cooling fan is operating smoothly with no unusual noises or vibrations. Sensor data contradicts this assessment. Possible Anomalous activity detected: Shows imbalance. Suggestion for Part Improvement: perform a physical balance inspection of the fan assembly; inspect blades for uneven wear, missing material, or mounting irregularities; rebalance or replace the fan and confirm resolution with a post-repair acoustic diagnostic.",
+      "recommended_action": "Immediately inspect and rebalance or replace the fan assembly; do not resume operation until an acoustic diagnostic confirms the imbalance is resolved.",
+      "urgency": "IMMEDIATE"
+    }
+  ]
+}
 
 Current Transcript for Extraction:
 "{{INSERT_TRANSCRIPT_HERE}}"
-Current Anomalous Report for decision
+Current Anomalous Report for decision:
 "{{INSERT_ANOMALOUS_REPORT_HERE}}"
 Let's think step by step:
